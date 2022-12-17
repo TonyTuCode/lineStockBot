@@ -1,0 +1,7 @@
+target/
+.mvn/
+.idea/
+src/main/resources
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
