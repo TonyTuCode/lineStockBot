@@ -32,9 +32,10 @@ public class MessageHandler {
 		JSONArray messages = new JSONArray();
 		JSONObject message = new JSONObject();
 		message.put("type", "text");
-		// 用\n做換行
+		// 放入要回傳的訊息，用\n做換行
 		message.put("text", text+"收到了!!!");
 		messages.put(message);
+		//放入reply token
 		body.put("replyToken", replyToken);
 		body.put("messages", messages);
 		sendLinePlatform(body);
