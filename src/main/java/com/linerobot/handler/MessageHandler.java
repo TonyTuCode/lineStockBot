@@ -22,9 +22,8 @@ public class MessageHandler {
 	private String LINE_TOKEN;
 
 	public void doAction(JSONObject event) {
-		text(event.getString("replyToken"), event
-				.getJSONObject("message")
-				.getString("text"));
+		text(event.getString("replyToken"),
+				event.getJSONObject("message").getString("text"));
 	}
 
 	private void text(String replyToken, String text) {
@@ -33,7 +32,7 @@ public class MessageHandler {
 		JSONObject message = new JSONObject();
 		message.put("type", "text");
 		// 放入要回傳的訊息，用\n做換行
-		message.put("text", text+"收到了!!!");
+		message.put("text", text);
 		messages.put(message);
 		//放入reply token
 		body.put("replyToken", replyToken);

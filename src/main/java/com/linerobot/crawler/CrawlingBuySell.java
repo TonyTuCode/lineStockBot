@@ -24,10 +24,12 @@ import static java.time.format.DateTimeFormatter.BASIC_ISO_DATE;
 public class CrawlingBuySell {
 
 	private static final String STOCK_DAILY = "https://www.twse.com.tw/fund/BFI82U?response=json&dayDate=";
-	public static void main(String[] args) throws IOException {
+
+	public String getBuySellOver () throws IOException {
+		String returnMessage = "";
 		SSLHelper.init();
 		String today = LocalDate.now().format(BASIC_ISO_DATE);
-		URL obj = new URL(STOCK_DAILY+20221221);
+		URL obj = new URL(STOCK_DAILY+20221223);
 		HttpURLConnection con = (HttpURLConnection) obj.openConnection();
 		con.setRequestMethod("GET");
 		int responseCode = con.getResponseCode();
@@ -54,26 +56,27 @@ public class CrawlingBuySell {
 			//合計
 			BigDecimal total = getCalculatedVal(getArrayByIdx(dataJArr,4)[3]);
 
-			System.out.println("外資買賣超(億): "+foreign);
-			System.out.println("投信買賣超(億): "+sit);
-			System.out.println("自營商買賣超(億): "+dealer);
-			System.out.println("合計(億): "+total);
-
+			StringBuilder messageCombine = new StringBuilder();
+			messageCombine.append("外資買賣超(億): "+foreign);
+			messageCombine.append("\n投信買賣超(億): "+sit);
+			messageCombine.append("\n自營商買賣超(億): "+dealer);
+			messageCombine.append("\n合計(億): "+total);
+			returnMessage = messageCombine.toString();
 
 		} else {
 			System.out.println("GET request did not work.");
 		}
-
-
+		return returnMessage;
 	}
-	public static String[] getArrayByIdx(JSONArray data,int idx){
+
+	public String[] getArrayByIdx(JSONArray data,int idx){
 		String [] arr = data.get(idx).toString()
 				.replaceAll("\\[\"", "")
 				.replaceAll("\"]", "")
 				.split("\",\"");
 		return arr;
 	}
-	public static BigDecimal getCalculatedVal(String unParsedStr){
+	public BigDecimal getCalculatedVal(String unParsedStr){
 		double doubleVal =Double.parseDouble(unParsedStr.replaceAll(",",""));
 		BigDecimal calDecimal = new BigDecimal(doubleVal/100000000).setScale(2, RoundingMode.HALF_UP);
 		return calDecimal;
