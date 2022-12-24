@@ -29,22 +29,18 @@ import com.linerobot.handler.MessageHandler;
 public class RobotController {
 
 	@Value("${line.user.secret}")
-	private String LINE_SECRET;
+	private static String LINE_SECRET;
 	
 	@Autowired
 	private MessageHandler messageHandler;
-	@GetMapping("/test")
-	public ResponseEntity test() {
-		return new ResponseEntity("Hello J A V A!!", HttpStatus.OK);
-	}
 
+	/** 接收消息的controller */
 	@PostMapping("/messaging")
 	public ResponseEntity messagingAPI(
 			@RequestHeader("X-Line-Signature") String X_Line_Signature,
 			@RequestBody String requestBody) throws UnsupportedEncodingException, IOException {
-		if (checkFromLine(requestBody, X_Line_Signature)) {
-			JSONObject object = new JSONObject(requestBody);
-			JSONArray objArr = object.getJSONArray("events");
+		if (checkFromLine(X_Line_Signature,requestBody)) {
+			JSONArray objArr = new JSONObject(requestBody).getJSONArray("events");
 			for (int i = 0; i < objArr.length(); i++) {
 				if (objArr.getJSONObject(i).getString("type").equals("message")) {
 					messageHandler.doAction(objArr.getJSONObject(i));
@@ -55,14 +51,20 @@ public class RobotController {
 		return new ResponseEntity<String>("Not line platform", HttpStatus.BAD_GATEWAY);
 	}
 
-	public boolean checkFromLine(String requestBody, String X_Line_Signature) {
+	/**
+	 * 驗證訊息來源
+	 * @param requestBody
+	 * @param X_Line_Signature
+	 * @return boolean
+	 */
+	public boolean checkFromLine(String X_Line_Signature,String requestBody) {
 		SecretKeySpec key = new SecretKeySpec(LINE_SECRET.getBytes(), "HmacSHA256");
-		Mac mac;
 		try {
-			mac = Mac.getInstance("HmacSHA256");
+			Mac mac = Mac.getInstance("HmacSHA256");
 			mac.init(key);
 			byte[] source = requestBody.getBytes("UTF-8");
 			String signature = Base64.encodeBase64String(mac.doFinal(source));
+			//比對簽名相符
 			if (signature.equals(X_Line_Signature)) {
 				return true;
 			}

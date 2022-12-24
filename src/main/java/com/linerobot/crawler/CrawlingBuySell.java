@@ -18,53 +18,63 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+import org.springframework.stereotype.Component;
 
 import static java.time.format.DateTimeFormatter.BASIC_ISO_DATE;
-
+@Component
 public class CrawlingBuySell {
 
 	private static final String STOCK_DAILY = "https://www.twse.com.tw/fund/BFI82U?response=json&dayDate=";
 
-	public String getBuySellOver () throws IOException {
+	/**
+	 * get 三大法人買賣超
+	 *
+	*/
+	public String getBuySellOver () {
 		String returnMessage = "";
 		SSLHelper.init();
 		String today = LocalDate.now().format(BASIC_ISO_DATE);
-		URL obj = new URL(STOCK_DAILY+20221223);
-		HttpURLConnection con = (HttpURLConnection) obj.openConnection();
-		con.setRequestMethod("GET");
-		int responseCode = con.getResponseCode();
-		if (responseCode == HttpURLConnection.HTTP_OK) { // success
-			BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-			String inputLine;
-			StringBuffer response = new StringBuffer();
+		try {
+			URL obj = new URL(STOCK_DAILY + 20221223);
+			HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+			con.setRequestMethod("GET");
+			int responseCode = con.getResponseCode();
+			if (responseCode == HttpURLConnection.HTTP_OK) { // success
+				BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+				String inputLine;
+				StringBuffer response = new StringBuffer();
 
-			while ((inputLine = in.readLine()) != null) {
-				response.append(inputLine);
+				while ((inputLine = in.readLine()) != null) {
+					response.append(inputLine);
+				}
+				in.close();
+
+				//拚成JSON資料
+				JSONArray dataJArr = new JSONObject("{\"responseData\":" + response + "}")
+						.getJSONObject("responseData")
+						.getJSONArray("data");
+				//自營商
+				BigDecimal dealer = getCalculatedVal(getArrayByIdx(dataJArr, 0)[3]).add(getCalculatedVal(getArrayByIdx(dataJArr, 1)[3]));
+				//外資
+				BigDecimal foreign = getCalculatedVal(getArrayByIdx(dataJArr, 3)[3]);
+				//投信
+				BigDecimal sit = getCalculatedVal(getArrayByIdx(dataJArr, 2)[3]);
+				//合計
+				BigDecimal total = getCalculatedVal(getArrayByIdx(dataJArr, 4)[3]);
+
+				StringBuilder messageCombine = new StringBuilder();
+				messageCombine.append("外資買賣超(億): " + foreign);
+				messageCombine.append("\n投信買賣超(億): " + sit);
+				messageCombine.append("\n自營商買賣超(億): " + dealer);
+				messageCombine.append("\n合計(億): " + total);
+				returnMessage = messageCombine.toString();
+
+			} else {
+				returnMessage = "請求異常，請確認網站問題";
 			}
-			in.close();
-
-			//撈JSON資料
-			JSONArray dataJArr = new JSONObject("{\"responseData\":"+response+"}")
-					.getJSONObject("responseData")
-					.getJSONArray("data");
-			//自營商
-			BigDecimal dealer = getCalculatedVal(getArrayByIdx(dataJArr,0)[3]).add(getCalculatedVal(getArrayByIdx(dataJArr,1)[3]));
-			//外資
-			BigDecimal foreign = getCalculatedVal(getArrayByIdx(dataJArr,3)[3]);
-			//投信
-			BigDecimal sit = getCalculatedVal(getArrayByIdx(dataJArr,2)[3]);
-			//合計
-			BigDecimal total = getCalculatedVal(getArrayByIdx(dataJArr,4)[3]);
-
-			StringBuilder messageCombine = new StringBuilder();
-			messageCombine.append("外資買賣超(億): "+foreign);
-			messageCombine.append("\n投信買賣超(億): "+sit);
-			messageCombine.append("\n自營商買賣超(億): "+dealer);
-			messageCombine.append("\n合計(億): "+total);
-			returnMessage = messageCombine.toString();
-
-		} else {
-			System.out.println("GET request did not work.");
+		}catch (Exception e){
+			returnMessage = "發生錯誤，請稍後再試";
+			e.printStackTrace();
 		}
 		return returnMessage;
 	}
