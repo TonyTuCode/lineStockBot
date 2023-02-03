@@ -11,7 +11,7 @@
 	</parent>
 	<groupId>com.example</groupId>
 	<artifactId>line-echo-robot</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.1</version>
 	<name>line-echo-robot</name>
 	<description>Demo project for Spring Boot</description>
 
