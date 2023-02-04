@@ -26,7 +26,7 @@ public class MessageHandler {
 
     @Autowired
     private CrawlingBuySell crawlingBuySell;
-    @Value("${line.user.channel.token}")
+    @Value("${line.bot.channel-token}")
     private String LINE_TOKEN;
 
     public void doAction(JSONObject event) {

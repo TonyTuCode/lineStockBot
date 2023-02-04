@@ -28,7 +28,7 @@ import com.linerobot.handler.MessageHandler;
 @RestController
 public class RobotController {
 
-	@Value("${line.user.secret}")
+	@Value("${line.bot.channel-secret}")
 	private static String LINE_SECRET;
 	
 	@Autowired

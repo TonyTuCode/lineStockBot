@@ -34,8 +34,9 @@ public class CrawlingBuySell {
 		String returnMessage = "";
 		SSLHelper.init();
 		String today = LocalDate.now().format(BASIC_ISO_DATE);
+		System.out.println(today);
 		try {
-			URL obj = new URL(STOCK_DAILY + 20221223);
+			URL obj = new URL(STOCK_DAILY + today);
 			HttpURLConnection con = (HttpURLConnection) obj.openConnection();
 			con.setRequestMethod("GET");
 			int responseCode = con.getResponseCode();
