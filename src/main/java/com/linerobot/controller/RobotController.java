@@ -29,7 +29,7 @@ import com.linerobot.handler.MessageHandler;
 public class RobotController {
 
 	@Value("${line.bot.channel-secret}")
-	private static String LINE_SECRET;
+	private String LINE_SECRET;
 	
 	@Autowired
 	private MessageHandler messageHandler;
