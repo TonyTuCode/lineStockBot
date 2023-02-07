@@ -11,4 +11,4 @@ ENV PATH=$PATH:/jdk-11.0.1/bin:/apache-maven-3.8.6/bin
 ARG CHANNEL_TOKEN
 ARG CHANNEL_SECRET
 RUN cd /lineStockBot && mvn clean package -DskipTests
-CMD java -Dline.bot.channelToken=${CHANNEL_TOKEN} -Dline.bot.channelSecret=${CHANNEL_SECRET} -jar /lineStockBot/target/line-echo-robot-0.1.jar
+CMD java -Dline.bot.token=${CHANNEL_TOKEN} -Dline.bot.secret=${CHANNEL_SECRET} -jar /lineStockBot/target/line-echo-robot-0.1.jar
