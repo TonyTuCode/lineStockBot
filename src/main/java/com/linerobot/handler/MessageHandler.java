@@ -26,17 +26,24 @@ public class MessageHandler {
     @Autowired
     private CrawlingBuySell crawlingBuySell;
 
+    @Autowired
+    private MenuCode menuCode;
+
     @Value("${line.bot.token}")
     private String LINE_TOKEN;
 
     public void doAction(JSONObject event) {
         String token = event.getString("replyToken");
+        String evenText = event.getJSONObject("message").getString("text");
         switch (eventAnalyzer(event)){
-            case MessageCode.DAILY_REPORT:
+            case MenuCode.MENU:
+                sendLinePlatform(text(token, menuCode.getMenu()));
+                break;
+            case MenuCode.DAILY_REPORT:
                 sendLinePlatform(text(token, crawlingBuySell.getBuySellOver("")));
                 break;
-            case MessageCode.HIS_DAY_REPORT:
-                String date = event.getJSONObject("message").getString("text").substring(3, 11);
+            case MenuCode.HIS_DAY_REPORT:
+                String date = evenText.substring(3, 11);
                 sendLinePlatform(text(token, crawlingBuySell.getBuySellOver(date)));
                 break;
         }
@@ -46,11 +53,17 @@ public class MessageHandler {
     private int eventAnalyzer(JSONObject event){
         String eventText = event.getJSONObject("message")
                 .getString("text").toLowerCase(); //統一轉小寫方便辨識
-        if (eventText.equals("day")) {
-            return MessageCode.DAILY_REPORT;
+        if (eventText.equals("menu")) {
+            return MenuCode.MENU;
         }
-        else if (eventText.matches("day{1}[0-9]{8}")) {
-            return MessageCode.HIS_DAY_REPORT;
+        if (eventText.equals("day")) {
+            return MenuCode.DAILY_REPORT;
+        }
+        if (eventText.matches("day{1}[0-9]{8}")) {
+            return MenuCode.HIS_DAY_REPORT;
+        }
+        if (){
+
         }
         return 0;
     }
