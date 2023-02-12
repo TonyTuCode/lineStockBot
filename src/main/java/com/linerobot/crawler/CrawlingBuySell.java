@@ -12,6 +12,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.Connection;
@@ -28,16 +29,16 @@ public class CrawlingBuySell {
 
 	/**
 	 * get 三大法人買賣超
-	 *
+	 * @param day
+	 * @return returnMessage
 	*/
-	public String getBuySellOver () {
+	public String getBuySellOver (String day) {
 		String returnMessage = "";
 		SSLHelper.init();
-		String today = LocalDate.now().format(BASIC_ISO_DATE);
-		System.out.println(today);
+		day = StringUtils.isBlank(day) ? LocalDate.now().format(BASIC_ISO_DATE) : day;
+		System.out.println(day);
 		try {
-			URL obj = new URL(STOCK_DAILY + today);
-			HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+			HttpURLConnection con = (HttpURLConnection) new URL(STOCK_DAILY + day).openConnection();
 			con.setRequestMethod("GET");
 			int responseCode = con.getResponseCode();
 			if (responseCode == HttpURLConnection.HTTP_OK) { // success

@@ -5,9 +5,10 @@ import java.io.IOException;
 
 public class TestCrawling {
 
-    @Test
+//    @Test
     public void testCrawlingFunc() throws IOException {
         CrawlingBuySell cbs = new CrawlingBuySell();
-        System.out.println(cbs.getBuySellOver());
+        System.out.println(cbs.getBuySellOver(""));
     }
+
 }

@@ -22,23 +22,45 @@ import org.springframework.stereotype.Service;
 public class MessageHandler {
 
     private static final String LINE_MSG_API = "https://api.line.me/v2/bot/message/reply";
-    private OkHttpClient client = new OkHttpClient();
 
     @Autowired
     private CrawlingBuySell crawlingBuySell;
+
     @Value("${line.bot.token}")
     private String LINE_TOKEN;
 
     public void doAction(JSONObject event) {
-        if (event.getJSONObject("message").getString("text").equals("day")) {
-            String textMessage2User = crawlingBuySell.getBuySellOver();
-            //待回傳json物件
-            JSONObject jsonMsg = text(event.getString("replyToken"), textMessage2User);
-            //傳送至Line
-            sendLinePlatform(jsonMsg);
+        String token = event.getString("replyToken");
+        switch (eventAnalyzer(event)){
+            case MessageCode.DAILY_REPORT:
+                sendLinePlatform(text(token, crawlingBuySell.getBuySellOver("")));
+                break;
+            case MessageCode.HIS_DAY_REPORT:
+                String date = event.getJSONObject("message").getString("text").substring(3, 11);
+                sendLinePlatform(text(token, crawlingBuySell.getBuySellOver(date)));
+                break;
         }
     }
 
+    //分析event
+    private int eventAnalyzer(JSONObject event){
+        String eventText = event.getJSONObject("message")
+                .getString("text").toLowerCase(); //統一轉小寫方便辨識
+        if (eventText.equals("day")) {
+            return MessageCode.DAILY_REPORT;
+        }
+        else if (eventText.matches("day{1}[0-9]{8}")) {
+            return MessageCode.HIS_DAY_REPORT;
+        }
+        return 0;
+    }
+
+    /**
+     * 回傳JSON字串組裝
+     * @param replyToken
+     * @param text
+     * @return JSONObject
+     */
     private JSONObject text(String replyToken, String text) {
         JSONObject body = new JSONObject();
         JSONArray messages = new JSONArray();
@@ -51,10 +73,13 @@ public class MessageHandler {
         body.put("replyToken", replyToken);
         body.put("messages", messages);
         return body;
-//		sendLinePlatform(body);
     }
 
-    public void sendLinePlatform(JSONObject json) {
+    /**
+     * 傳送至line
+     * @param json
+     */
+    private void sendLinePlatform(JSONObject json) {
         //組建Request
         Request request = new Request.Builder()
                 .url(LINE_MSG_API)
@@ -63,6 +88,7 @@ public class MessageHandler {
                 .post(RequestBody.create(MediaType.parse("application/json; charset=utf-8"), json.toString()))
                 .build();
         //發出Request
+        OkHttpClient client = new OkHttpClient();
         client.newCall(request).enqueue(new Callback() {
             //覆寫成功時的行為
             @Override
