@@ -62,9 +62,6 @@ public class MessageHandler {
         if (eventText.matches("day{1}[0-9]{8}")) {
             return MenuCode.HIS_DAY_REPORT;
         }
-        if (){
-
-        }
         return 0;
     }
 
