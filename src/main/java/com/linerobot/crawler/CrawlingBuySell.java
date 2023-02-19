@@ -36,7 +36,6 @@ public class CrawlingBuySell {
 		String returnMessage = "";
 		SSLHelper.init();
 		day = StringUtils.isBlank(day) ? LocalDate.now().format(BASIC_ISO_DATE) : day;
-		System.out.println(day);
 		try {
 			HttpURLConnection con = (HttpURLConnection) new URL(STOCK_DAILY + day).openConnection();
 			con.setRequestMethod("GET");
@@ -65,7 +64,8 @@ public class CrawlingBuySell {
 				BigDecimal total = getCalculatedVal(getArrayByIdx(dataJArr, 4)[3]);
 
 				StringBuilder messageCombine = new StringBuilder();
-				messageCombine.append("外資買賣超(億): " + foreign);
+				messageCombine.append(day+"籌碼日報");
+				messageCombine.append("\n外資買賣超(億): " + foreign);
 				messageCombine.append("\n投信買賣超(億): " + sit);
 				messageCombine.append("\n自營商買賣超(億): " + dealer);
 				messageCombine.append("\n合計(億): " + total);
@@ -81,14 +81,14 @@ public class CrawlingBuySell {
 		return returnMessage;
 	}
 
-	public String[] getArrayByIdx(JSONArray data,int idx){
+	private String[] getArrayByIdx(JSONArray data,int idx){
 		String [] arr = data.get(idx).toString()
 				.replaceAll("\\[\"", "")
 				.replaceAll("\"]", "")
 				.split("\",\"");
 		return arr;
 	}
-	public BigDecimal getCalculatedVal(String unParsedStr){
+	private BigDecimal getCalculatedVal(String unParsedStr){
 		double doubleVal =Double.parseDouble(unParsedStr.replaceAll(",",""));
 		BigDecimal calDecimal = new BigDecimal(doubleVal/100000000).setScale(2, RoundingMode.HALF_UP);
 		return calDecimal;

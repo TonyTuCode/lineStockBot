@@ -3,6 +3,7 @@ package com.linerobot.handler;
 import java.io.IOException;
 
 import com.linerobot.crawler.CrawlingBuySell;
+import com.linerobot.crawler.CrawlingStrong;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,15 +28,18 @@ public class MessageHandler {
     private CrawlingBuySell crawlingBuySell;
 
     @Autowired
+    private CrawlingStrong crawlingStrong;
+
+    @Autowired
     private MenuCode menuCode;
 
     @Value("${line.bot.token}")
     private String LINE_TOKEN;
 
-    public void doAction(JSONObject event) {
+    public void doAction(JSONObject event) throws IOException {
         String token = event.getString("replyToken");
         String evenText = event.getJSONObject("message").getString("text");
-        switch (eventAnalyzer(event)){
+        switch (eventAnalyzer(event)) {
             case MenuCode.MENU:
                 sendLinePlatform(text(token, menuCode.getMenu()));
                 break;
@@ -43,9 +47,12 @@ public class MessageHandler {
                 sendLinePlatform(text(token, crawlingBuySell.getBuySellOver("")));
                 break;
             case MenuCode.HIS_DAY_REPORT:
-                String date = evenText.substring(3, 11);
+                String date = evenText.substring(3, evenText.length());
                 sendLinePlatform(text(token, crawlingBuySell.getBuySellOver(date)));
                 break;
+            case MenuCode.STRONGER_THAN_WTX:
+                String days = evenText.substring(6, evenText.length());
+                sendLinePlatform(text(token, crawlingStrong.getRiseTop(Integer.valueOf(days))));
         }
     }
 
@@ -61,6 +68,9 @@ public class MessageHandler {
         }
         if (eventText.matches("day{1}[0-9]{8}")) {
             return MenuCode.HIS_DAY_REPORT;
+        }
+        if (eventText.matches("strong{1}[2-5]{1}")){
+            return MenuCode.STRONGER_THAN_WTX;
         }
         return 0;
     }
