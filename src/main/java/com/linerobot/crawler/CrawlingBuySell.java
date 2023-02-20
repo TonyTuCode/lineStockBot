@@ -1,24 +1,21 @@
 package com.linerobot.crawler;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
+import com.linerobot.tools.RequestSender;
+import com.linerobot.tools.SSLHelper;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.jsoup.Connection;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
 import static java.time.format.DateTimeFormatter.BASIC_ISO_DATE;
@@ -26,6 +23,26 @@ import static java.time.format.DateTimeFormatter.BASIC_ISO_DATE;
 public class CrawlingBuySell {
 
 	private static final String STOCK_DAILY = "https://www.twse.com.tw/fund/BFI82U?response=json&dayDate=";
+
+	private static final String BUY_OVER = "https://www.twse.com.tw/zh/fund/TWT38U";
+
+	/**
+	 * get 法人連續買超
+	 * @return returnMessage
+	 */
+	public String getBuyOverStockTop () {
+		RequestSender requestSender = new RequestSender();
+		String returnMessage = "";
+		try {
+			Map map = new HashMap();
+			map.put("date", "20230216");
+			returnMessage = requestSender.postRequester(BUY_OVER, map);
+		}catch (Exception e){
+			e.printStackTrace();
+		}
+		return returnMessage;
+	}
+
 
 	/**
 	 * get 三大法人買賣超
@@ -36,20 +53,9 @@ public class CrawlingBuySell {
 		String returnMessage = "";
 		SSLHelper.init();
 		day = StringUtils.isBlank(day) ? LocalDate.now().format(BASIC_ISO_DATE) : day;
+		RequestSender requestSender = new RequestSender();
 		try {
-			HttpURLConnection con = (HttpURLConnection) new URL(STOCK_DAILY + day).openConnection();
-			con.setRequestMethod("GET");
-			int responseCode = con.getResponseCode();
-			if (responseCode == HttpURLConnection.HTTP_OK) { // success
-				BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-				String inputLine;
-				StringBuffer response = new StringBuffer();
-
-				while ((inputLine = in.readLine()) != null) {
-					response.append(inputLine);
-				}
-				in.close();
-
+				String response = requestSender.getRequester(STOCK_DAILY+day);
 				//拚成JSON資料
 				JSONArray dataJArr = new JSONObject("{\"responseData\":" + response + "}")
 						.getJSONObject("responseData")
@@ -71,11 +77,8 @@ public class CrawlingBuySell {
 				messageCombine.append("\n合計(億): " + total);
 				returnMessage = messageCombine.toString();
 
-			} else {
-				returnMessage = "請求異常，請確認網站問題";
-			}
 		}catch (Exception e){
-			returnMessage = "發生錯誤，請稍後再試";
+			returnMessage = "查無該日資料，請重新確認";
 			e.printStackTrace();
 		}
 		return returnMessage;

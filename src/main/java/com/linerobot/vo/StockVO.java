@@ -10,6 +10,8 @@ public class StockVO {
 
     private BigDecimal stockIncrease;
 
+    private Long BuyOverQty;
+
     public String getStockName() {
         return stockName;
     }
@@ -32,5 +34,13 @@ public class StockVO {
 
     public void setStockIncrease(BigDecimal stockIncrease) {
         this.stockIncrease = stockIncrease;
+    }
+
+    public Long getBuyOverQty() {
+        return BuyOverQty;
+    }
+
+    public void setBuyOverQty(Long buyOverQty) {
+        BuyOverQty = buyOverQty;
     }
 }

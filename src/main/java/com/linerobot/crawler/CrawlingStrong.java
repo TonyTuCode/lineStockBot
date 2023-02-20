@@ -1,5 +1,6 @@
 package com.linerobot.crawler;
 
+import com.linerobot.tools.SSLHelper;
 import com.linerobot.vo.StockVO;
 import org.springframework.stereotype.Component;
 
@@ -89,7 +90,7 @@ public class CrawlingStrong {
         return diffPercent;
     }
 
-    //將字串裡的數字清洗出來
+    //Purge字串裡的數字
     private BigDecimal getPurgedStockIncrease(String rawStockIncreaseStr){
         Matcher matcher = Pattern.compile(("[0-9]*[.]{1}[0-9]{2}")).matcher(rawStockIncreaseStr);
         BigDecimal purgedIncrease = new BigDecimal(0);

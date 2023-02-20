@@ -1,15 +1,17 @@
 import com.linerobot.crawler.CrawlingBuySell;
 import com.linerobot.crawler.CrawlingStrong;
 import com.linerobot.handler.MenuCode;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
 public class TestCrawling {
 
-//    @Test
+    @Test
     public void testCrawlingFunc() {
         CrawlingBuySell cbs = new CrawlingBuySell();
-        System.out.println(cbs.getBuySellOver(""));
+//        System.out.println(cbs.getBuySellOver("20230217"));
+        System.out.println(cbs.getBuyOverStockTop());
     }
 
 //    @Test

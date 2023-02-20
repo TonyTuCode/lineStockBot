@@ -59,7 +59,7 @@ public class MessageHandler {
     //分析event
     private int eventAnalyzer(JSONObject event){
         String eventText = event.getJSONObject("message")
-                .getString("text").toLowerCase(); //統一轉小寫方便辨識
+                .getString("text").trim().toLowerCase(); //去除空白&轉小寫
         if (eventText.equals("menu")) {
             return MenuCode.MENU;
         }
