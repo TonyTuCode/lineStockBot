@@ -6,6 +6,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 public class RequestSender {
@@ -14,18 +16,16 @@ public class RequestSender {
         String returnMessage = "";
         SSLHelper.init();
             //用於拼接多組參數
-            String[] paramBuilderArr = new String[paramMap.size()];
-            int arrayIndex = 0;
+            List<String> paramList = new LinkedList<>();
             for (Map.Entry<String, String> entry : paramMap.entrySet()){
-                paramBuilderArr[arrayIndex] = entry.getKey() + "=" + entry.getValue();
-                arrayIndex++;
+                paramList.add(entry.getKey() + "=" + entry.getValue());
             }
             HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
             con.setDoOutput(true);
             con.setRequestMethod("POST");
             con.setRequestProperty( "Content-Type", "application/x-www-form-urlencoded" );
             OutputStream outputStream = con.getOutputStream();
-            outputStream.write(String.join("&", paramBuilderArr).getBytes());
+            outputStream.write(String.join("&", paramList).getBytes());
             if (con.getResponseCode() == HttpURLConnection.HTTP_OK){
                 BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
                 String inputLine;
