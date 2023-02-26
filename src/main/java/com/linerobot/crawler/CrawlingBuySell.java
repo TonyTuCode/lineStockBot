@@ -30,12 +30,12 @@ public class CrawlingBuySell {
 	 * get 法人連續買超
 	 * @return returnMessage
 	 */
-	public String getBuyOverStockTop () {
+	public String getBuyOverStockTop (String date) {
 		RequestSender requestSender = new RequestSender();
 		String returnMessage = "";
 		try {
 			Map map = new HashMap();
-			map.put("date", "20230216");
+			map.put("date", date);
 			returnMessage = requestSender.postRequester(BUY_OVER, map);
 		}catch (Exception e){
 			e.printStackTrace();
@@ -51,7 +51,6 @@ public class CrawlingBuySell {
 	*/
 	public String getBuySellOver (String day) {
 		String returnMessage = "";
-		SSLHelper.init();
 		day = StringUtils.isBlank(day) ? LocalDate.now().format(BASIC_ISO_DATE) : day;
 		RequestSender requestSender = new RequestSender();
 		try {

@@ -24,14 +24,18 @@ public class MessageHandler {
 
     private static final String LINE_MSG_API = "https://api.line.me/v2/bot/message/reply";
 
-    @Autowired
     private CrawlingBuySell crawlingBuySell;
 
-    @Autowired
     private CrawlingStrong crawlingStrong;
 
-    @Autowired
     private MenuCode menuCode;
+
+    public MessageHandler (CrawlingBuySell crawlingBuySell,CrawlingStrong crawlingStrong,MenuCode menuCode){
+        this.crawlingBuySell = crawlingBuySell;
+        this.crawlingStrong = crawlingStrong;
+        this.menuCode = menuCode;
+    }
+
 
     @Value("${line.bot.token}")
     private String LINE_TOKEN;

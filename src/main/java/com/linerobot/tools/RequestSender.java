@@ -42,6 +42,7 @@ public class RequestSender {
 
     public String getRequester (String url) throws IOException {
         String returnMessage = "";
+        SSLHelper.init();
         HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
         con.setRequestMethod("GET");
         if (con.getResponseCode() == HttpURLConnection.HTTP_OK) {
