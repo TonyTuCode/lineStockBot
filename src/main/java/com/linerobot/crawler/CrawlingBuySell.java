@@ -9,6 +9,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import com.linerobot.tools.RequestSender;
@@ -30,13 +32,48 @@ public class CrawlingBuySell {
 	 * get 法人連續買超
 	 * @return returnMessage
 	 */
-	public String getBuyOverStockTop (String date) {
+	public String getBuyOverStockTop () {
 		RequestSender requestSender = new RequestSender();
 		String returnMessage = "";
 		try {
-			Map map = new HashMap();
-			map.put("date", date);
-			returnMessage = requestSender.postRequester(BUY_OVER, map);
+
+			//往前找連續買超天
+				Map<String,String> map = new HashMap();
+				int collectDaysData = 0 ;
+				int minusDay = 0 ;
+				while (collectDaysData < 5){
+					String dayBack =LocalDate.now().minusDays(minusDay).format(BASIC_ISO_DATE);
+					map.put("date", dayBack);
+					String response = requestSender.postRequester(BUY_OVER, map);
+					JSONObject originData = new JSONObject(response);
+					//用reponse裡的"stat":"OK" 分辨是否有拿到資料
+					if (("OK").equals(originData.getString("stat"))){
+						collectDaysData++;
+
+					}
+					Thread.currentThread().sleep(1000);
+					minusDay++;
+				}
+
+
+//			for (int i = 0 ; i <=50 ; i++){
+//				String[] s = getArrayByIdx(dataJArr,i);
+//				System.out.print(s[1]);  //拿到股號
+//				System.out.print(s[2]);	//拿到股名
+//				System.out.println(s[3]);  //買超數
+//			}
+
+			//遞迴解  if(往回找一日比對不到了就停止)
+
+
+
+
+			//用java套件找一年全部日期扣掉放假日及國定假日
+
+
+
+
+
 		}catch (Exception e){
 			e.printStackTrace();
 		}

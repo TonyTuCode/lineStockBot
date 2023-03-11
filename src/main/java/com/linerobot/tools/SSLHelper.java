@@ -40,7 +40,7 @@ public class SSLHelper {
 		connect.header("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
 		connect.header("Accept-Encoding", "gzip, deflate, sdch");
 		connect.header("Accept-Language", "zh-TW,zh;q=0.8");
-//		connect.timeout(3000);
+		connect.timeout(2000);
 		connect.ignoreHttpErrors(true);
 		return connect;
 	}

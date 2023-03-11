@@ -4,6 +4,7 @@ import com.linerobot.handler.MenuCode;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.time.LocalDate;
 
 public class TestCrawling {
 
@@ -11,7 +12,7 @@ public class TestCrawling {
     public void testCrawlingFunc() {
         CrawlingBuySell cbs = new CrawlingBuySell();
 //        System.out.println(cbs.getBuySellOver("20230217"));
-        System.out.println(cbs.getBuyOverStockTop("20230216"));
+        System.out.println(cbs.getBuyOverStockTop());
     }
 
 //    @Test
@@ -24,6 +25,11 @@ public class TestCrawling {
     public void testMenu(){
         MenuCode m = new MenuCode();
         System.out.println(m.getMenu());
+    }
+
+//    @Test
+    public void testWeek(){
+        System.out.println(LocalDate.now().getDayOfWeek().getValue());
     }
 
 
