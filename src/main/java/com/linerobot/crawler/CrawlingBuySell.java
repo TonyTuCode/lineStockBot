@@ -8,13 +8,11 @@ import java.math.RoundingMode;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import com.linerobot.tools.RequestSender;
 import com.linerobot.tools.SSLHelper;
+import com.linerobot.vo.StockVO;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -29,50 +27,41 @@ public class CrawlingBuySell {
 	private static final String BUY_OVER = "https://www.twse.com.tw/zh/fund/TWT38U";
 
 	/**
-	 * get 法人連續買超
+	 * get 法人連續買超>3日
 	 * @return returnMessage
 	 */
 	public String getBuyOverStockTop () {
 		RequestSender requestSender = new RequestSender();
 		String returnMessage = "";
+		Map<Integer,List<StockVO>> collectStockList = new TreeMap<>();
 		try {
-
-			//往前找連續買超天
-				Map<String,String> map = new HashMap();
-				int collectDaysData = 0 ;
-				int minusDay = 0 ;
-				while (collectDaysData < 5){
-					String dayBack =LocalDate.now().minusDays(minusDay).format(BASIC_ISO_DATE);
-					map.put("date", dayBack);
-					String response = requestSender.postRequester(BUY_OVER, map);
-					JSONObject originData = new JSONObject(response);
-					//用reponse裡的"stat":"OK" 分辨是否有拿到資料
-					if (("OK").equals(originData.getString("stat"))){
-						collectDaysData++;
-
+			Map<String, String> map = new HashMap();
+			int collectDataDays = 0;
+			int minusDay = 0;
+			// 往回抓5天買超股票 TODO 測完改回5
+			while (collectDataDays < 2){
+				String dayBack =LocalDate.now().minusDays(minusDay).format(BASIC_ISO_DATE);
+				map.put("date", dayBack);
+				String response = requestSender.postRequester(BUY_OVER, map);
+				JSONObject originData = new JSONObject(response);
+				//用response裡的"stat":"OK" 分辨是否有拿到資料
+				if (("OK").equals(originData.getString("stat"))){
+					//建一個List存每天的資料
+					List<StockVO> stockListByDay = new ArrayList<>();
+					for (int i = 0 ; i <=50 ; i++){
+						StockVO vo = new StockVO();
+						String[] eachStockBlock = getArrayByIdx(originData.getJSONArray("data"),i);
+						vo.setStockID(eachStockBlock[1]);
+						vo.setStockName(eachStockBlock[2]);
+						vo.setBuyOverQty(Long.valueOf(eachStockBlock[3].replace(",", "")));
+						stockListByDay.add(vo);
 					}
-					Thread.currentThread().sleep(1000);
-					minusDay++;
+					collectStockList.put(collectDataDays,stockListByDay);
+					collectDataDays++;
 				}
-
-
-//			for (int i = 0 ; i <=50 ; i++){
-//				String[] s = getArrayByIdx(dataJArr,i);
-//				System.out.print(s[1]);  //拿到股號
-//				System.out.print(s[2]);	//拿到股名
-//				System.out.println(s[3]);  //買超數
-//			}
-
-			//遞迴解  if(往回找一日比對不到了就停止)
-
-
-
-
-			//用java套件找一年全部日期扣掉放假日及國定假日
-
-
-
-
+				Thread.currentThread().sleep(1000); //避免請求過於頻繁
+				minusDay++;
+			}
 
 		}catch (Exception e){
 			e.printStackTrace();

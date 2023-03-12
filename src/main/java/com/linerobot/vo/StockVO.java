@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 
 public class StockVO {
 
+    private String stockID;
+
     private String stockName;
 
     private BigDecimal stockPrice;
@@ -11,6 +13,14 @@ public class StockVO {
     private BigDecimal stockIncrease;
 
     private Long BuyOverQty;
+
+    public String getStockID() {
+        return stockID;
+    }
+
+    public void setStockID(String stockID) {
+        this.stockID = stockID;
+    }
 
     public String getStockName() {
         return stockName;
