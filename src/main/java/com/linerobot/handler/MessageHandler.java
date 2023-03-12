@@ -42,8 +42,8 @@ public class MessageHandler {
 
     public void doAction(JSONObject event) throws IOException {
         String token = event.getString("replyToken");
-        String evenText = event.getJSONObject("message").getString("text");
-        switch (eventAnalyzer(event)) {
+        String evenText = event.getJSONObject("message").getString("text").trim().toLowerCase();
+        switch (eventAnalyzer(evenText)) {
             case MenuCode.MENU:
                 sendLinePlatform(text(token, menuCode.getMenu()));
                 break;
@@ -61,9 +61,8 @@ public class MessageHandler {
     }
 
     //分析event
-    private int eventAnalyzer(JSONObject event){
-        String eventText = event.getJSONObject("message")
-                .getString("text").trim().toLowerCase(); //去除空白&轉小寫
+    private int eventAnalyzer(String eventText){
+
         if (eventText.equals("menu")) {
             return MenuCode.MENU;
         }
