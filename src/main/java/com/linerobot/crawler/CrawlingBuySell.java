@@ -60,7 +60,7 @@ public class CrawlingBuySell {
 					collectStockList.put(collectDataDays,stockListByDay);
 					collectDataDays++;
 				}
-				Thread.currentThread().sleep(1000); //避免請求過於頻繁
+				Thread.currentThread().sleep(500); //避免請求過於頻繁
 				minusDay++;
 			}
 
@@ -78,6 +78,8 @@ public class CrawlingBuySell {
 			comparedList.forEach(e->{
 				returnMessage.append(e.getStockID() +" "+e.getStockName()+"\n");
 			});
+			System.out.println("===returnMessage===");
+			System.out.println(returnMessage);
 
 		}catch (Exception e){
 			e.printStackTrace();
