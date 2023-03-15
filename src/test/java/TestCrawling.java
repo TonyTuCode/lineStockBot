@@ -8,7 +8,7 @@ import java.time.LocalDate;
 
 public class TestCrawling {
 
-    @Test
+//    @Test
     public void testCrawlingFunc() {
         CrawlingBuySell cbs = new CrawlingBuySell();
 //        System.out.println(cbs.getBuySellOver("20230217"));

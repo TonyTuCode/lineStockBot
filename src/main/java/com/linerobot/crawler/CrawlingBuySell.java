@@ -17,6 +17,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 import static java.time.format.DateTimeFormatter.BASIC_ISO_DATE;
 @Component
@@ -32,13 +33,13 @@ public class CrawlingBuySell {
 	 */
 	public String getBuyOverStockTop () {
 		RequestSender requestSender = new RequestSender();
-		String returnMessage = "";
+		StringBuffer returnMessage = new StringBuffer();
 		Map<Integer,List<StockVO>> collectStockList = new TreeMap<>();
 		try {
 			Map<String, String> map = new HashMap();
 			int collectDataDays = 0;
 			int minusDay = 0;
-			// 往回抓5天買超股票 TODO 測完改回5
+			// 當天+往回抓2天買超股票 TODO 之後改為變數形式
 			while (collectDataDays < 2){
 				String dayBack =LocalDate.now().minusDays(minusDay).format(BASIC_ISO_DATE);
 				map.put("date", dayBack);
@@ -48,11 +49,11 @@ public class CrawlingBuySell {
 				if (("OK").equals(originData.getString("stat"))){
 					//建一個List存每天的資料
 					List<StockVO> stockListByDay = new ArrayList<>();
-					for (int i = 0 ; i <=50 ; i++){
+					for (int i = 0 ; i <=100 ; i++){
 						StockVO vo = new StockVO();
 						String[] eachStockBlock = getArrayByIdx(originData.getJSONArray("data"),i);
-						vo.setStockID(eachStockBlock[1]);
-						vo.setStockName(eachStockBlock[2]);
+						vo.setStockID(eachStockBlock[1].trim());
+						vo.setStockName(eachStockBlock[2].trim());
 						vo.setBuyOverQty(Long.valueOf(eachStockBlock[3].replace(",", "")));
 						stockListByDay.add(vo);
 					}
@@ -63,10 +64,25 @@ public class CrawlingBuySell {
 				minusDay++;
 			}
 
+			List<StockVO> comparedList = new ArrayList<>();
+			for (int i = 0; i < collectStockList.size(); i++) {
+				if (CollectionUtils.isEmpty(comparedList)){
+					comparedList = collectStockList.get(i);
+				} else {
+					comparedList.retainAll(collectStockList.get(i));
+				}
+			}
+
+			//組合回傳字串
+			returnMessage.append("外資3日連續買超股:\n");
+			comparedList.forEach(e->{
+				returnMessage.append(e.getStockID() +" "+e.getStockName()+"\n");
+			});
+
 		}catch (Exception e){
 			e.printStackTrace();
 		}
-		return returnMessage;
+		return returnMessage.toString();
 	}
 
 

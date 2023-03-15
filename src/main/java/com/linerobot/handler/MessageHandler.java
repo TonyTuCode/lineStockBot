@@ -57,6 +57,10 @@ public class MessageHandler {
             case MenuCode.STRONGER_THAN_WTX:
                 String days = evenText.substring(6, evenText.length());
                 sendLinePlatform(text(token, crawlingStrong.getRiseTop(Integer.valueOf(days))));
+                break;
+            case MenuCode.FOREIGN_BUY:
+                sendLinePlatform(text(token, crawlingBuySell.getBuyOverStockTop()));
+                break;
         }
     }
 
@@ -75,6 +79,10 @@ public class MessageHandler {
         if (eventText.matches("strong{1}[2-5]{1}")){
             return MenuCode.STRONGER_THAN_WTX;
         }
+        if (eventText.equals("foreignbuy")){
+            return MenuCode.FOREIGN_BUY;
+        }
+
         return 0;
     }
 

@@ -1,6 +1,7 @@
 package com.linerobot.vo;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 
 public class StockVO {
 
@@ -53,4 +54,13 @@ public class StockVO {
     public void setBuyOverQty(Long buyOverQty) {
         BuyOverQty = buyOverQty;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        StockVO stockVO = (StockVO) o;
+        return Objects.equals(stockID, stockVO.stockID);
+    }
+
 }

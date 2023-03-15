@@ -17,6 +17,9 @@ public class MenuCode {
     /** 漲幅勝大盤 */
     public static final int STRONGER_THAN_WTX = 3;
 
+    /** 外資買超*/
+    public static final int FOREIGN_BUY = 4;
+
     public String getMenu (){
         StringBuilder menu = new StringBuilder();
         menu.append("指令表(不分大小寫)");
@@ -25,6 +28,7 @@ public class MenuCode {
         menu.append("\nday : 籌碼日報");
         menu.append("\nday+yyyyMMdd: 籌碼指定日報");
         menu.append("\nstrong+2~5: x日勝大盤10%股");
+        menu.append("\nforeignbuy: 外資3日買超");
         return menu.toString();
     }
 
