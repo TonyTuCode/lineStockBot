@@ -23,11 +23,11 @@ public class RequestSender {
             HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
             con.setDoOutput(true);
             con.setRequestMethod("POST");
-            con.setRequestProperty( "Content-Type", "application/x-www-form-urlencoded" );
+            con.setRequestProperty( "Content-Type", "application/x-www-form-urlencoded; charset=utf-8" );
             OutputStream outputStream = con.getOutputStream();
             outputStream.write(String.join("&", paramList).getBytes());
             if (con.getResponseCode() == HttpURLConnection.HTTP_OK){
-                BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+                BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream(),"UTF-8"));
                 String inputLine;
                 StringBuffer response = new StringBuffer();
 
@@ -46,7 +46,7 @@ public class RequestSender {
         HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
         con.setRequestMethod("GET");
         if (con.getResponseCode() == HttpURLConnection.HTTP_OK) {
-            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream(),"UTF-8"));
             String inputLine;
             StringBuffer response = new StringBuffer();
 
