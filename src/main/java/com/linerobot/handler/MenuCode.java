@@ -32,7 +32,7 @@ public class MenuCode {
         menu.append("\nday+yyyyMMdd: 籌碼指定日報");
         menu.append("\nstrong+2~5: x日勝大盤10%股");
         menu.append("\nforeignbuy: 外資3日買超");
-        menu.append("\ninvtrubuy: 外資3日買超");
+        menu.append("\ninvtrubuy: 投信3日買超");
         return menu.toString();
     }
 
