@@ -25,16 +25,32 @@ public class CrawlingBuySell {
 
 	private static final String STOCK_DAILY = "https://www.twse.com.tw/fund/BFI82U?response=json&dayDate=";
 
-	private static final String BUY_OVER = "https://www.twse.com.tw/zh/fund/TWT38U";
+	private static final String FOREIGN_BUY_OVER = "https://www.twse.com.tw/zh/fund/TWT38U";
+
+	private static final String INV_TRU_BUY_OVER = "https://www.twse.com.tw/zh/fund/TWT44U";
+
+
 
 	/**
 	 * get 法人連續買超>3日
+	 * @Param juridicalPerson 1:外資 2:投信
 	 * @return returnMessage
 	 */
-	public String getBuyOverStockTop () {
+	public String getBuyOverStockTop (int juridicalPerson) {
 		RequestSender requestSender = new RequestSender();
 		StringBuffer returnMessage = new StringBuffer();
 		Map<Integer,List<StockVO>> collectStockList = new TreeMap<>();
+		String restURL ="";
+		switch (juridicalPerson) {
+			case 1:
+				restURL = FOREIGN_BUY_OVER;
+				returnMessage.append("外資3日連續買超股:\n");
+				break;
+			case 2:
+				restURL = INV_TRU_BUY_OVER;
+				returnMessage.append("投信3日連續買超股:\n");
+				break;
+		}
 		try {
 			Map<String, String> map = new HashMap();
 			int collectDataDays = 0;
@@ -43,7 +59,7 @@ public class CrawlingBuySell {
 			while (collectDataDays < 2){
 				String dayBack =LocalDate.now().minusDays(minusDay).format(BASIC_ISO_DATE);
 				map.put("date", dayBack);
-				String response = requestSender.postRequester(BUY_OVER, map);
+				String response = requestSender.postRequester(restURL, map);
 				JSONObject originData = new JSONObject(response);
 				//用response裡的"stat":"OK" 分辨是否有拿到資料
 				if (("OK").equals(originData.getString("stat"))){
@@ -54,8 +70,12 @@ public class CrawlingBuySell {
 						String[] eachStockBlock = getArrayByIdx(originData.getJSONArray("data"),i);
 						vo.setStockID(eachStockBlock[1].trim());
 						vo.setStockName(eachStockBlock[2].trim());
-						vo.setBuyOverQty(Long.valueOf(eachStockBlock[3].replace(",", "")));
-						stockListByDay.add(vo);
+						Long buyOverQty = Long.valueOf(eachStockBlock[5].replace(",", ""));
+						vo.setBuyOverQty(buyOverQty/1000);
+						//>0時才為買超
+						if (buyOverQty>0){
+							stockListByDay.add(vo);
+						}
 					}
 					collectStockList.put(collectDataDays,stockListByDay);
 					collectDataDays++;
@@ -73,13 +93,9 @@ public class CrawlingBuySell {
 				}
 			}
 
-			//組合回傳字串
-			returnMessage.append("外資3日連續買超股:\n");
 			comparedList.forEach(e->{
 				returnMessage.append(e.getStockID() +" "+e.getStockName()+"\n");
 			});
-			System.out.println("===returnMessage===");
-			System.out.println(returnMessage);
 
 		}catch (Exception e){
 			e.printStackTrace();
@@ -108,14 +124,14 @@ public class CrawlingBuySell {
 				//外資
 				BigDecimal foreign = getCalculatedVal(getArrayByIdx(dataJArr, 3)[3]);
 				//投信
-				BigDecimal sit = getCalculatedVal(getArrayByIdx(dataJArr, 2)[3]);
+				BigDecimal invTru = getCalculatedVal(getArrayByIdx(dataJArr, 2)[3]);
 				//合計
 				BigDecimal total = getCalculatedVal(getArrayByIdx(dataJArr, 4)[3]);
 
 				StringBuilder messageCombine = new StringBuilder();
 				messageCombine.append(day+"籌碼日報");
 				messageCombine.append("\n外資買賣超(億): " + foreign);
-				messageCombine.append("\n投信買賣超(億): " + sit);
+				messageCombine.append("\n投信買賣超(億): " + invTru);
 				messageCombine.append("\n自營商買賣超(億): " + dealer);
 				messageCombine.append("\n合計(億): " + total);
 				returnMessage = messageCombine.toString();

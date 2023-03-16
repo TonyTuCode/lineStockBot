@@ -59,7 +59,10 @@ public class MessageHandler {
                 sendLinePlatform(text(token, crawlingStrong.getRiseTop(Integer.valueOf(days))));
                 break;
             case MenuCode.FOREIGN_BUY:
-                sendLinePlatform(text(token, crawlingBuySell.getBuyOverStockTop()));
+                sendLinePlatform(text(token, crawlingBuySell.getBuyOverStockTop(1)));
+                break;
+            case MenuCode.INV_TRU_BUY:
+                sendLinePlatform(text(token, crawlingBuySell.getBuyOverStockTop(2)));
                 break;
         }
     }
@@ -81,6 +84,9 @@ public class MessageHandler {
         }
         if (eventText.equals("foreignbuy")){
             return MenuCode.FOREIGN_BUY;
+        }
+        if (eventText.equals("invtrubuy")){
+            return MenuCode.INV_TRU_BUY;
         }
 
         return 0;
