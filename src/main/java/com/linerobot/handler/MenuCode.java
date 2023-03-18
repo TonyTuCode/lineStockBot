@@ -8,6 +8,9 @@ public class MenuCode {
     /** MENU */
     public static final int MENU = 999;
 
+    /** 新菜單 */
+    public static final int NEW_MENU = 998;
+
     /** 籌碼日報 */
     public static final int DAILY_REPORT = 1;
 
@@ -28,6 +31,7 @@ public class MenuCode {
         menu.append("指令表(不分大小寫)");
         menu.append("\n===============");
         menu.append("\nmenu: 菜單 ");
+        menu.append("\nnewmenu: 新版菜單 ");
         menu.append("\nday : 籌碼日報");
         menu.append("\nday+yyyyMMdd: 籌碼指定日報");
         menu.append("\nstrong+2~5: x日勝大盤10%股");

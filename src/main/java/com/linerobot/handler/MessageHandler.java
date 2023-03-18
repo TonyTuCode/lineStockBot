@@ -47,6 +47,9 @@ public class MessageHandler {
             case MenuCode.MENU:
                 sendLinePlatform(text(token, menuCode.getMenu()));
                 break;
+            case MenuCode.NEW_MENU:
+                sendLinePlatform(textNewMenu(token));
+                break;
             case MenuCode.DAILY_REPORT:
                 sendLinePlatform(text(token, crawlingBuySell.getBuySellOver("")));
                 break;
@@ -72,6 +75,9 @@ public class MessageHandler {
 
         if (eventText.equals("menu")) {
             return MenuCode.MENU;
+        }
+        if (eventText.equals("newmenu")){
+            return MenuCode.NEW_MENU;
         }
         if (eventText.equals("day")) {
             return MenuCode.DAILY_REPORT;
@@ -105,6 +111,37 @@ public class MessageHandler {
         message.put("type", "text");
         //放入回傳訊息
         message.put("text", text);
+        messages.put(message);
+        //放入reply token
+        body.put("replyToken", replyToken);
+        body.put("messages", messages);
+        return body;
+    }
+
+    /**
+     * 回傳新版菜單 TODO 待整合
+     * @param replyToken
+     * @return JSONObject
+     */
+    private  JSONObject textNewMenu(String replyToken){
+        JSONObject body = new JSONObject();
+        JSONArray messages = new JSONArray();
+        JSONObject message = new JSONObject();
+        JSONObject template = new JSONObject();
+        JSONArray actions = new JSONArray();
+
+        actions.put(new JSONObject().put("type", "message").put("label", "day").put("text", "day"));
+        actions.put(new JSONObject().put("type", "message").put("label", "3日勝大盤").put("text", "strong3"));
+        actions.put(new JSONObject().put("type", "message").put("label", "外資3日買超").put("text", "foreignbuy"));
+        actions.put(new JSONObject().put("type", "message").put("label", "投信3日買超").put("text", "invtrubuy"));
+
+        template.put("text", "常用指令表");
+        template.put("type", "buttons");
+        template.put("actions", actions);
+        message.put("template", template);
+        message.put("altText", "hello");
+        message.put("type", "template");
+        //放入回傳訊息
         messages.put(message);
         //放入reply token
         body.put("replyToken", replyToken);
