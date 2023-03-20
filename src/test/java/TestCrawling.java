@@ -12,8 +12,9 @@ public class TestCrawling {
     public void testCrawlingFunc() {
         CrawlingBuySell cbs = new CrawlingBuySell();
 //        System.out.println(cbs.getBuySellOver("20230217"));
-//        System.out.println(cbs.getBuyOverStockTop(2));
-        System.out.println(cbs.getBuySellOver(""));
+//        System.out.println(cbs.getBuyOverStockTop(1));
+        System.out.println(cbs.getBuyOverStockTop(2));
+//        System.out.println(cbs.getBuySellOver(""));
     }
 
 //    @Test
