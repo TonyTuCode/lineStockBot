@@ -23,7 +23,7 @@ import static java.time.format.DateTimeFormatter.BASIC_ISO_DATE;
 @Component
 public class CrawlingBuySell {
 
-	private static final String STOCK_DAILY = "https://www.twse.com.tw/fund/BFI82U?response=json&dayDate=";
+	private static final String STOCK_DAILY = "https://www.twse.com.tw/rwd/zh/fund/BFI82U?Date=";
 
 	private static final String FOREIGN_BUY_OVER = "https://www.twse.com.tw/zh/fund/TWT38U";
 
