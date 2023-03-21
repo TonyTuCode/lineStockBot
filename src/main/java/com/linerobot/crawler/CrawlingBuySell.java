@@ -126,7 +126,7 @@ public class CrawlingBuySell {
 				//投信
 				BigDecimal invTru = getCalculatedVal(getArrayByIdx(dataJArr, 2)[3]);
 				//合計
-				BigDecimal total = getCalculatedVal(getArrayByIdx(dataJArr, 4)[3]);
+				BigDecimal total = getCalculatedVal(getArrayByIdx(dataJArr, 5)[3]);
 
 				StringBuilder messageCombine = new StringBuilder();
 				messageCombine.append(day+"籌碼日報");
