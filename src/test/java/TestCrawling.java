@@ -1,19 +1,25 @@
+import com.linerobot.LineEchoRobotApplication;
 import com.linerobot.crawler.CrawlingBuySell;
 import com.linerobot.crawler.CrawlingStrong;
 import com.linerobot.handler.MenuCode;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.IOException;
 import java.time.LocalDate;
 
+@SpringBootTest(classes = LineEchoRobotApplication.class)
 public class TestCrawling {
+
+    @Autowired
+    CrawlingBuySell crawlingBuySell;
 
     @Test
     public void testCrawlingFunc() {
-        CrawlingBuySell cbs = new CrawlingBuySell();
-//        System.out.println(cbs.getBuyOverStockTop(1));
-//        System.out.println(cbs.getBuyOverStockTop(2));
-        System.out.println(cbs.getBuySellOver(""));
+//        System.out.println(crawlingBuySell.getBuyOverStockTop(1));
+//        System.out.println(crawlingBuySell.getBuyOverStockTop(2));
+        System.out.println(crawlingBuySell.getBuySellOver(""));
     }
 
 //    @Test

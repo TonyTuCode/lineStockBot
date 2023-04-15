@@ -1,7 +1,9 @@
 package com.linerobot.crawler;
 
+import com.linerobot.tools.RequestSender;
 import com.linerobot.tools.SSLHelper;
 import com.linerobot.vo.StockVO;
+import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -18,7 +20,7 @@ import org.jsoup.select.Elements;
 
 @Component
 public class CrawlingStrong {
-    private static final String WTX_HISTORY = "https://www.taiwanindex.com.tw/index/history/t00";
+    private static final String WTX_HISTORY = "https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?response=json";
 
     private static String STOCK_3DAYS_RISE_TOP = "https://concords.moneydj.com/z/zg/zg_A_0_%S.djhtm";
 
@@ -76,17 +78,26 @@ public class CrawlingStrong {
      * @throws IOException
      */
     private BigDecimal getWTXDiffByDays (int days) throws IOException {
-        SSLHelper.init();
-        SSLHelper helper = new SSLHelper();
+
+        RequestSender requestSender = new RequestSender();
         BigDecimal diffPercent = new BigDecimal(0);
-        Document htmlTag = helper.getSSLConn(WTX_HISTORY).post();
-        if (htmlTag != null) {
-            Elements stockIndex = htmlTag.getElementsByTag("tr");
-            BigDecimal backDays = getDouble(stockIndex.get(days).getElementsByTag("td").get(1).text());
-            BigDecimal today = getDouble(stockIndex.get(1).getElementsByTag("td").get(1).text());
-            BigDecimal diff = today.subtract(backDays);
-            diffPercent = diff.multiply(new BigDecimal(100)).divide(backDays,2, RoundingMode.HALF_UP);
-        }
+
+        String response = requestSender.getRequester(WTX_HISTORY);
+        JSONObject originData = new JSONObject(response);
+
+        System.out.println(originData.getJSONArray("data").get(0));
+//        SSLHelper.init();
+//        SSLHelper helper = new SSLHelper();
+//
+//        Document htmlTag = helper.getSSLConn(WTX_HISTORY).get();
+//        if (htmlTag != null) {
+//            Elements stockIndex = htmlTag.getElementsByTag("tr");
+//            BigDecimal backDays = getDouble(stockIndex.get(stockIndex.size()-1-days).getElementsByTag("td").get(1).text());
+//            BigDecimal today = getDouble(stockIndex.get(stockIndex.size()-1).getElementsByTag("td").get(1).text());
+//            BigDecimal diff = today.subtract(backDays);
+//            diffPercent = diff.multiply(new BigDecimal(100)).divide(backDays,2, RoundingMode.HALF_UP);
+//        }
+
         return diffPercent;
     }
 

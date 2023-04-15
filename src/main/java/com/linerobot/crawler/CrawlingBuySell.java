@@ -10,25 +10,35 @@ import java.net.URL;
 import java.time.LocalDate;
 import java.util.*;
 
+import com.linerobot.tools.Convertor;
 import com.linerobot.tools.RequestSender;
 import com.linerobot.tools.SSLHelper;
 import com.linerobot.vo.StockVO;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+
+import javax.annotation.Resource;
 
 import static java.time.format.DateTimeFormatter.BASIC_ISO_DATE;
 @Component
 public class CrawlingBuySell {
+
+	private Convertor convertor;
+
+	public CrawlingBuySell (Convertor convertor) {
+		this.convertor = convertor;
+	}
 
 	private static final String STOCK_DAILY = "https://www.twse.com.tw/rwd/zh/fund/BFI82U?Date=";
 
 	private static final String FOREIGN_BUY_OVER = "https://www.twse.com.tw/rwd/zh/fund/TWT38U";
 
 	private static final String INV_TRU_BUY_OVER = "https://www.twse.com.tw/rwd/zh/fund/TWT44U";
-
 
 
 	/**
@@ -67,7 +77,7 @@ public class CrawlingBuySell {
 					List<StockVO> stockListByDay = new ArrayList<>();
 					for (int i = 0 ; i <=100 ; i++){
 						StockVO vo = new StockVO();
-						String[] eachStockBlock = getArrayByIdx(originData.getJSONArray("data"),i);
+						String[] eachStockBlock = convertor.getArrayByIdx(originData.getJSONArray("data"),i);
 						vo.setStockID(eachStockBlock[1].trim());
 						vo.setStockName(eachStockBlock[2].trim());
 						Long buyOverQty = Long.valueOf(eachStockBlock[5].replace(",", ""));
@@ -120,13 +130,26 @@ public class CrawlingBuySell {
 						.getJSONObject("responseData")
 						.getJSONArray("data");
 				//自營商
-				BigDecimal dealer = getCalculatedVal(getArrayByIdx(dataJArr, 0)[3]).add(getCalculatedVal(getArrayByIdx(dataJArr, 1)[3]));
-				//外資
-				BigDecimal foreign = getCalculatedVal(getArrayByIdx(dataJArr, 3)[3]);
+				BigDecimal dealer = new BigDecimal(0);
 				//投信
-				BigDecimal invTru = getCalculatedVal(getArrayByIdx(dataJArr, 2)[3]);
+				BigDecimal invTru = new BigDecimal(0);
+				//外資
+				BigDecimal foreign = new BigDecimal(0);
 				//合計
-				BigDecimal total = getCalculatedVal(getArrayByIdx(dataJArr, 5)[3]);
+				BigDecimal total = new BigDecimal(0);
+
+				for (int i = 0 ; i <= 5 ; i++){
+					BigDecimal amount = convertor.convertStr2CalculatedVal(convertor.getArrayByIdx(dataJArr, i)[3]);
+					if (i == 0 || i == 1) {
+						dealer = dealer.add(amount);
+					} else if (i == 2) {
+						invTru = invTru.add(amount);
+					} else if (i == 3) {
+						foreign = foreign.add(amount);
+					} else if (i == 5) {
+						total = total.add(amount);
+					}
+				}
 
 				StringBuilder messageCombine = new StringBuilder();
 				messageCombine.append(day+"籌碼日報");
@@ -143,17 +166,7 @@ public class CrawlingBuySell {
 		return returnMessage;
 	}
 
-	private String[] getArrayByIdx(JSONArray data,int idx){
-		String [] arr = data.get(idx).toString()
-				.replaceAll("\\[\"", "")
-				.replaceAll("\"]", "")
-				.split("\",\"");
-		return arr;
-	}
-	private BigDecimal getCalculatedVal(String unParsedStr){
-		double doubleVal =Double.parseDouble(unParsedStr.replaceAll(",",""));
-		BigDecimal calDecimal = new BigDecimal(doubleVal/100000000).setScale(2, RoundingMode.HALF_UP);
-		return calDecimal;
-	}
+
+
 
 }
