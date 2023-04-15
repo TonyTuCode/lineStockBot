@@ -15,17 +15,19 @@ public class TestCrawling {
     @Autowired
     CrawlingBuySell crawlingBuySell;
 
-    @Test
+    @Autowired
+    CrawlingStrong crawlingStrong;
+
+//    @Test
     public void testCrawlingFunc() {
 //        System.out.println(crawlingBuySell.getBuyOverStockTop(1));
 //        System.out.println(crawlingBuySell.getBuyOverStockTop(2));
         System.out.println(crawlingBuySell.getBuySellOver(""));
     }
 
-//    @Test
+    @Test
     public void testCrawlingStrong() throws IOException {
-        CrawlingStrong cs = new CrawlingStrong();
-        System.out.println(cs.getRiseTop(3));
+        System.out.println(crawlingStrong.getRiseTop(3));
     }
 
 //    @Test

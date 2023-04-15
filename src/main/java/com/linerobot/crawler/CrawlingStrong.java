@@ -1,8 +1,10 @@
 package com.linerobot.crawler;
 
+import com.linerobot.tools.Convertor;
 import com.linerobot.tools.RequestSender;
 import com.linerobot.tools.SSLHelper;
 import com.linerobot.vo.StockVO;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +22,16 @@ import org.jsoup.select.Elements;
 
 @Component
 public class CrawlingStrong {
+
+    private Convertor convertor;
+
+    private RequestSender requestSender;
+
+    public CrawlingStrong (Convertor convertor, RequestSender requestSender) {
+        this.convertor = convertor;
+        this.requestSender = requestSender;
+    }
+
     private static final String WTX_HISTORY = "https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?response=json";
 
     private static String STOCK_3DAYS_RISE_TOP = "https://concords.moneydj.com/z/zg/zg_A_0_%S.djhtm";
@@ -79,43 +91,38 @@ public class CrawlingStrong {
      */
     private BigDecimal getWTXDiffByDays (int days) throws IOException {
 
-        RequestSender requestSender = new RequestSender();
-        BigDecimal diffPercent = new BigDecimal(0);
-
         String response = requestSender.getRequester(WTX_HISTORY);
         JSONObject originData = new JSONObject(response);
+        JSONArray dataJArr = originData.getJSONArray("data");
 
-        System.out.println(originData.getJSONArray("data").get(0));
-//        SSLHelper.init();
-//        SSLHelper helper = new SSLHelper();
-//
-//        Document htmlTag = helper.getSSLConn(WTX_HISTORY).get();
-//        if (htmlTag != null) {
-//            Elements stockIndex = htmlTag.getElementsByTag("tr");
-//            BigDecimal backDays = getDouble(stockIndex.get(stockIndex.size()-1-days).getElementsByTag("td").get(1).text());
-//            BigDecimal today = getDouble(stockIndex.get(stockIndex.size()-1).getElementsByTag("td").get(1).text());
-//            BigDecimal diff = today.subtract(backDays);
-//            diffPercent = diff.multiply(new BigDecimal(100)).divide(backDays,2, RoundingMode.HALF_UP);
-//        }
+        BigDecimal todayVal = new BigDecimal(0);
+        BigDecimal backDaysVal = new BigDecimal(0);
+
+        for (int i = 0 ; i < dataJArr.length() ; i++) {
+            BigDecimal wtxIndexByDay = convertor.convertStr2Decimal(convertor.getArrayByIdx(dataJArr, i)[4]);
+            System.out.println(wtxIndexByDay);
+            if (i == 0) {
+                todayVal = wtxIndexByDay;
+            } else if (i == (days - 1)) {
+                backDaysVal = wtxIndexByDay;
+            }
+        }
+        BigDecimal diff = todayVal.subtract(backDaysVal);
+        BigDecimal diffPercent = diff.multiply(new BigDecimal(100)).divide(backDaysVal, 2, RoundingMode.HALF_UP);
 
         return diffPercent;
     }
 
-    //Purge字串裡的數字
+    //Purge字串裡的數字及小數點部分
     private BigDecimal getPurgedStockIncrease(String rawStockIncreaseStr){
         Matcher matcher = Pattern.compile(("[0-9]*[.]{1}[0-9]{2}")).matcher(rawStockIncreaseStr);
         BigDecimal purgedIncrease = new BigDecimal(0);
         while (matcher.find()) {
             if (!"".equals(matcher.group()))
-                purgedIncrease = this.getDouble(matcher.group());
+                purgedIncrease = convertor.convertStr2Decimal(matcher.group());
         }
         return purgedIncrease;
     }
 
 
-    private BigDecimal getDouble(String unParsedStr){
-        double doubleVal =Double.parseDouble(unParsedStr);
-        BigDecimal calDecimal = new BigDecimal(doubleVal).setScale(2, RoundingMode.HALF_UP); //取到小數點後2位4捨5入
-        return calDecimal;
-    }
 }

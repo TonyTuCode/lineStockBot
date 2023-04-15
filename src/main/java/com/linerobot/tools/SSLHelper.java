@@ -6,6 +6,7 @@ import javax.net.ssl.X509TrustManager;
 
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
+import org.springframework.stereotype.Component;
 
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -13,6 +14,7 @@ import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
+@Component
 public class SSLHelper {
 
 	private static String USER_AGENT = "Mozilla/4.0 (compatible; MSIE 9.0; Windows NT 5.0)";

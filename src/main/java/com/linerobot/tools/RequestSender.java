@@ -1,5 +1,7 @@
 package com.linerobot.tools;
 
+import org.springframework.stereotype.Component;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -10,6 +12,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+@Component
 public class RequestSender {
 
     public String postRequester(String url,Map<String,String> paramMap) throws IOException {
