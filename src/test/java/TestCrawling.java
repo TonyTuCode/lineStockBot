@@ -20,8 +20,8 @@ public class TestCrawling {
 
     @Test
     public void testCrawlingFunc() {
-        System.out.println(crawlingBuySell.getBuyOverStockTop(1));
-//        System.out.println(crawlingBuySell.getBuyOverStockTop(2));
+//        System.out.println(crawlingBuySell.getBuyOverStockTop(1));
+        System.out.println(crawlingBuySell.getBuyOverStockTop(3));
 //        System.out.println(crawlingBuySell.getBuySellOver(""));
     }
 

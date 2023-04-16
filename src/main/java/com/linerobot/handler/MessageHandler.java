@@ -1,6 +1,10 @@
 package com.linerobot.handler;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import com.linerobot.crawler.CrawlingBuySell;
 import com.linerobot.crawler.CrawlingStrong;
@@ -50,6 +54,9 @@ public class MessageHandler {
             case MenuCode.NEW_MENU:
                 sendLinePlatform(textNewMenu(token));
                 break;
+            case MenuCode.BUY_OVER_MENU:
+                sendLinePlatform(textBuyMenu(token));
+                break;
             case MenuCode.DAILY_REPORT:
                 sendLinePlatform(text(token, crawlingBuySell.getBuySellOver("")));
                 break;
@@ -67,6 +74,9 @@ public class MessageHandler {
             case MenuCode.INV_TRU_BUY:
                 sendLinePlatform(text(token, crawlingBuySell.getBuyOverStockTop(2)));
                 break;
+            case MenuCode.FOREIGN_INV_TOGETHER_BUY:
+                sendLinePlatform(text(token, crawlingBuySell.getBuyOverStockTop(3)));
+                break;
         }
     }
 
@@ -78,6 +88,9 @@ public class MessageHandler {
         }
         if (eventText.equals("newmenu")){
             return MenuCode.NEW_MENU;
+        }
+        if (eventText.equals("buymenu")){
+            return MenuCode.BUY_OVER_MENU;
         }
         if (eventText.equals("day")) {
             return MenuCode.DAILY_REPORT;
@@ -93,6 +106,9 @@ public class MessageHandler {
         }
         if (eventText.equals("invtrubuy")){
             return MenuCode.INV_TRU_BUY;
+        }
+        if (eventText.equals("togetherbuy")){
+            return MenuCode.FOREIGN_INV_TOGETHER_BUY;
         }
 
         return 0;
@@ -124,22 +140,42 @@ public class MessageHandler {
      * @return JSONObject
      */
     private  JSONObject textNewMenu(String replyToken){
+        Map commandAndWord = new TreeMap();
+        commandAndWord.put("buymenu", "買超選單");
+        commandAndWord.put("day", "每日籌碼");
+        commandAndWord.put("strong3","3日勝大盤");
+        return this.menuConvertor("常用指令表",commandAndWord,replyToken);
+    }
+
+    /**
+     * 回傳買超菜單
+     * @param replyToken
+     * @return JSONObject
+     */
+    private JSONObject textBuyMenu(String replyToken){
+        Map commandAndWord = new TreeMap();
+        commandAndWord.put("foreignbuy","外資3日買超");
+        commandAndWord.put("invtrubuy","投信3日買超");
+        commandAndWord.put("togetherbuy", "土洋合攻3日買超");
+        return this.menuConvertor("買超指令表",commandAndWord,replyToken);
+    }
+
+
+    private JSONObject menuConvertor (String title, Map<String,String> commandAndWord, String replyToken) {
         JSONObject body = new JSONObject();
         JSONArray messages = new JSONArray();
         JSONObject message = new JSONObject();
         JSONObject template = new JSONObject();
         JSONArray actions = new JSONArray();
+        commandAndWord.forEach( (command,word) -> {
+            actions.put(new JSONObject().put("type", "message").put("text", command).put("label", word));
+        });
 
-        actions.put(new JSONObject().put("type", "message").put("label", "day").put("text", "day"));
-        actions.put(new JSONObject().put("type", "message").put("label", "3日勝大盤").put("text", "strong3"));
-        actions.put(new JSONObject().put("type", "message").put("label", "外資3日買超").put("text", "foreignbuy"));
-        actions.put(new JSONObject().put("type", "message").put("label", "投信3日買超").put("text", "invtrubuy"));
-
-        template.put("text", "常用指令表");
+        template.put("text", title);
         template.put("type", "buttons");
         template.put("actions", actions);
         message.put("template", template);
-        message.put("altText", "hello");
+        message.put("altText", title);
         message.put("type", "template");
         //放入回傳訊息
         messages.put(message);

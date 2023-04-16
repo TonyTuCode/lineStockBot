@@ -35,29 +35,37 @@ public class CrawlingBuySell {
 
 	/**
 	 * get 法人連續買超>3日
-	 * @Param juridicalPerson 1:外資 2:投信
+	 * @Param juridicalPerson 1:外資 2:投信 3:土洋合力
 	 * @return returnMessage
 	 */
-	public String getBuyOverStockTop (int juridicalPerson) {
+	public String getBuyOverStockTop(int juridicalPerson) {
 		StringBuffer returnMessage = new StringBuffer();
-		String restURL ="";
+		List<StockVO> comparedList = new ArrayList<>();
 		try {
-		switch (juridicalPerson) {
-			case 1:
-				restURL = FOREIGN_BUY_OVER;
-				returnMessage.append("外資3日連續買超股:\n");
-				break;
-			case 2:
-				restURL = INV_TRU_BUY_OVER;
-				returnMessage.append("投信3日連續買超股:\n");
-				break;
-		}
-			List<StockVO> comparedList = this.getBuyOverByURL(restURL);
-			comparedList.forEach(e->{
-				returnMessage.append(e.getStockID() +" "+e.getStockName()+"\n");
+			switch (juridicalPerson) {
+				case 1:
+					comparedList = this.getBuyOverByURL(FOREIGN_BUY_OVER);
+					returnMessage.append("外資3日連續買超股:\n");
+					break;
+				case 2:
+					comparedList = this.getBuyOverByURL(INV_TRU_BUY_OVER);
+					returnMessage.append("投信3日連續買超股:\n");
+					break;
+				case 3:
+					List<StockVO> foreignList = this.getBuyOverByURL(FOREIGN_BUY_OVER);
+					List<StockVO> invTruList = this.getBuyOverByURL(INV_TRU_BUY_OVER);
+					foreignList.retainAll(invTruList);
+					comparedList = foreignList;
+					returnMessage.append("土洋合攻3日連續買超股:\n");
+					break;
+			}
+
+			//將結果印出
+			comparedList.forEach(e -> {
+				returnMessage.append(e.getStockID() + " " + e.getStockName() + "\n");
 			});
 
-		}catch (Exception e){
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return returnMessage.toString();
@@ -77,11 +85,11 @@ public class CrawlingBuySell {
 			JSONObject originData = new JSONObject(response);
 			//用response裡的"stat":"OK" 分辨是否有拿到資料
 			if (("OK").equals(originData.getString("stat"))){
-				System.out.println(dayBack+": "+originData.getJSONArray("data").length());
-
-				//建一個List存每天的資料
+				JSONArray sortedData = originData.getJSONArray("data");
+				//建一個List存每天的資料(抓前200)
 				List<StockVO> stockListByDay = new ArrayList<>();
-				for (int i = 0 ; i <= 200; i++){
+				int listSize = sortedData.length() < 200 ? sortedData.length() : 200;
+				for (int i = 0 ; i < listSize; i++){
 					StockVO vo = new StockVO();
 					String[] eachStockBlock = convertor.getArrayByIdx(originData.getJSONArray("data"),i);
 					vo.setStockID(eachStockBlock[1].trim());
@@ -100,6 +108,7 @@ public class CrawlingBuySell {
 			minusDay++;
 		}
 
+		//比較集合重複
 		List<StockVO> comparedList = new ArrayList<>();
 		for (int i = 0; i < collectStockList.size(); i++) {
 			if (CollectionUtils.isEmpty(comparedList)){
