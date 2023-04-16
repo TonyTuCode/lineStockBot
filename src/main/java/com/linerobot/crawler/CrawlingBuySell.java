@@ -1,29 +1,17 @@
 package com.linerobot.crawler;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.time.LocalDate;
 import java.util.*;
 
 import com.linerobot.tools.Convertor;
 import com.linerobot.tools.RequestSender;
-import com.linerobot.tools.SSLHelper;
 import com.linerobot.vo.StockVO;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-
-import javax.annotation.Resource;
-
 import static java.time.format.DateTimeFormatter.BASIC_ISO_DATE;
 @Component
 public class CrawlingBuySell {
@@ -66,7 +54,7 @@ public class CrawlingBuySell {
 			int collectDataDays = 0;
 			int minusDay = 0;
 			// 當天+往回抓2天買超股票 TODO 之後改為變數形式
-			while (collectDataDays < 2){
+			while (collectDataDays <= 2){
 				String dayBack =LocalDate.now().minusDays(minusDay).format(BASIC_ISO_DATE);
 				map.put("date", dayBack);
 				String response = requestSender.postRequester(restURL, map);
