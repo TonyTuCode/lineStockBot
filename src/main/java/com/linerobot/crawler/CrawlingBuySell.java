@@ -70,16 +70,18 @@ public class CrawlingBuySell {
 		int collectDataDays = 0;
 		int minusDay = 0;
 		// 當天+往回抓2天買超股票 TODO 之後改為變數形式
-		while (collectDataDays <= 2){
+		while (collectDataDays <= 3){
 			String dayBack =LocalDate.now().minusDays(minusDay).format(BASIC_ISO_DATE);
 			map.put("date", dayBack);
 			String response = requestSender.postRequester(restURL, map);
 			JSONObject originData = new JSONObject(response);
 			//用response裡的"stat":"OK" 分辨是否有拿到資料
 			if (("OK").equals(originData.getString("stat"))){
+				System.out.println(dayBack+": "+originData.getJSONArray("data").length());
+
 				//建一個List存每天的資料
 				List<StockVO> stockListByDay = new ArrayList<>();
-				for (int i = 0 ; i <=100 ; i++){
+				for (int i = 0 ; i <= 200; i++){
 					StockVO vo = new StockVO();
 					String[] eachStockBlock = convertor.getArrayByIdx(originData.getJSONArray("data"),i);
 					vo.setStockID(eachStockBlock[1].trim());
@@ -94,7 +96,7 @@ public class CrawlingBuySell {
 				collectStockList.put(collectDataDays,stockListByDay);
 				collectDataDays++;
 			}
-			Thread.currentThread().sleep(500); //避免請求過於頻繁
+			Thread.currentThread().sleep(1000); //避免請求過於頻繁
 			minusDay++;
 		}
 
