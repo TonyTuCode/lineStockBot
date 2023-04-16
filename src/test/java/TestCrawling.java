@@ -18,7 +18,7 @@ public class TestCrawling {
     @Autowired
     CrawlingStrong crawlingStrong;
 
-//    @Test
+    @Test
     public void testCrawlingFunc() {
         System.out.println(crawlingBuySell.getBuyOverStockTop(1));
 //        System.out.println(crawlingBuySell.getBuyOverStockTop(2));

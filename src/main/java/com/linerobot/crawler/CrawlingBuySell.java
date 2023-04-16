@@ -1,5 +1,6 @@
 package com.linerobot.crawler;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
@@ -18,8 +19,11 @@ public class CrawlingBuySell {
 
 	private Convertor convertor;
 
-	public CrawlingBuySell (Convertor convertor) {
+	private RequestSender requestSender;
+
+	public CrawlingBuySell (Convertor convertor,RequestSender requestSender) {
 		this.convertor = convertor;
+		this.requestSender = requestSender;
 	}
 
 	private static final String STOCK_DAILY = "https://www.twse.com.tw/rwd/zh/fund/BFI82U?Date=";
@@ -35,10 +39,9 @@ public class CrawlingBuySell {
 	 * @return returnMessage
 	 */
 	public String getBuyOverStockTop (int juridicalPerson) {
-		RequestSender requestSender = new RequestSender();
 		StringBuffer returnMessage = new StringBuffer();
-		Map<Integer,List<StockVO>> collectStockList = new TreeMap<>();
 		String restURL ="";
+		try {
 		switch (juridicalPerson) {
 			case 1:
 				restURL = FOREIGN_BUY_OVER;
@@ -49,48 +52,7 @@ public class CrawlingBuySell {
 				returnMessage.append("投信3日連續買超股:\n");
 				break;
 		}
-		try {
-			Map<String, String> map = new HashMap();
-			int collectDataDays = 0;
-			int minusDay = 0;
-			// 當天+往回抓2天買超股票 TODO 之後改為變數形式
-			while (collectDataDays <= 2){
-				String dayBack =LocalDate.now().minusDays(minusDay).format(BASIC_ISO_DATE);
-				map.put("date", dayBack);
-				String response = requestSender.postRequester(restURL, map);
-				JSONObject originData = new JSONObject(response);
-				//用response裡的"stat":"OK" 分辨是否有拿到資料
-				if (("OK").equals(originData.getString("stat"))){
-					//建一個List存每天的資料
-					List<StockVO> stockListByDay = new ArrayList<>();
-					for (int i = 0 ; i <=100 ; i++){
-						StockVO vo = new StockVO();
-						String[] eachStockBlock = convertor.getArrayByIdx(originData.getJSONArray("data"),i);
-						vo.setStockID(eachStockBlock[1].trim());
-						vo.setStockName(eachStockBlock[2].trim());
-						Long buyOverQty = Long.valueOf(eachStockBlock[5].replace(",", ""));
-						vo.setBuyOverQty(buyOverQty/1000);
-						//>0時才為買超
-						if (buyOverQty>0){
-							stockListByDay.add(vo);
-						}
-					}
-					collectStockList.put(collectDataDays,stockListByDay);
-					collectDataDays++;
-				}
-				Thread.currentThread().sleep(500); //避免請求過於頻繁
-				minusDay++;
-			}
-
-			List<StockVO> comparedList = new ArrayList<>();
-			for (int i = 0; i < collectStockList.size(); i++) {
-				if (CollectionUtils.isEmpty(comparedList)){
-					comparedList = collectStockList.get(i);
-				} else {
-					comparedList.retainAll(collectStockList.get(i));
-				}
-			}
-
+			List<StockVO> comparedList = this.getBuyOverByURL(restURL);
 			comparedList.forEach(e->{
 				returnMessage.append(e.getStockID() +" "+e.getStockName()+"\n");
 			});
@@ -99,6 +61,53 @@ public class CrawlingBuySell {
 			e.printStackTrace();
 		}
 		return returnMessage.toString();
+	}
+
+	//將拿到買超集合方法獨立
+	private List<StockVO> getBuyOverByURL(String restURL) throws IOException, InterruptedException {
+		Map<Integer,List<StockVO>> collectStockList = new TreeMap<>();
+		Map<String, String> map = new HashMap();
+		int collectDataDays = 0;
+		int minusDay = 0;
+		// 當天+往回抓2天買超股票 TODO 之後改為變數形式
+		while (collectDataDays <= 2){
+			String dayBack =LocalDate.now().minusDays(minusDay).format(BASIC_ISO_DATE);
+			map.put("date", dayBack);
+			String response = requestSender.postRequester(restURL, map);
+			JSONObject originData = new JSONObject(response);
+			//用response裡的"stat":"OK" 分辨是否有拿到資料
+			if (("OK").equals(originData.getString("stat"))){
+				//建一個List存每天的資料
+				List<StockVO> stockListByDay = new ArrayList<>();
+				for (int i = 0 ; i <=100 ; i++){
+					StockVO vo = new StockVO();
+					String[] eachStockBlock = convertor.getArrayByIdx(originData.getJSONArray("data"),i);
+					vo.setStockID(eachStockBlock[1].trim());
+					vo.setStockName(eachStockBlock[2].trim());
+					Long buyOverQty = Long.valueOf(eachStockBlock[5].replace(",", ""));
+					vo.setBuyOverQty(buyOverQty/1000);
+					//>0時才為買超
+					if (buyOverQty>0){
+						stockListByDay.add(vo);
+					}
+				}
+				collectStockList.put(collectDataDays,stockListByDay);
+				collectDataDays++;
+			}
+			Thread.currentThread().sleep(500); //避免請求過於頻繁
+			minusDay++;
+		}
+
+		List<StockVO> comparedList = new ArrayList<>();
+		for (int i = 0; i < collectStockList.size(); i++) {
+			if (CollectionUtils.isEmpty(comparedList)){
+				comparedList = collectStockList.get(i);
+			} else {
+				comparedList.retainAll(collectStockList.get(i));
+			}
+		}
+
+		return comparedList;
 	}
 
 
