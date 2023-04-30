@@ -133,6 +133,9 @@ public class CrawlingBuySell {
 		RequestSender requestSender = new RequestSender();
 		try {
 				String response = requestSender.getRequester(STOCK_DAILY+day);
+				//實際取到的日期
+				String actualDate = new JSONObject("{\"responseData\":" + response + "}")
+					.getJSONObject("responseData").getString("date");
 				//拚成JSON資料
 				JSONArray dataJArr = new JSONObject("{\"responseData\":" + response + "}")
 						.getJSONObject("responseData")
@@ -160,7 +163,7 @@ public class CrawlingBuySell {
 				}
 
 				StringBuilder messageCombine = new StringBuilder();
-				messageCombine.append(day+"籌碼日報");
+				messageCombine.append(actualDate+"籌碼日報");
 				messageCombine.append("\n外資買賣超(億): " + foreign);
 				messageCombine.append("\n投信買賣超(億): " + invTru);
 				messageCombine.append("\n自營商買賣超(億): " + dealer);
@@ -173,8 +176,5 @@ public class CrawlingBuySell {
 		}
 		return returnMessage;
 	}
-
-
-
 
 }

@@ -1,6 +1,7 @@
 package com.linerobot.vo;
 
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.Objects;
 
 public class StockVO {
@@ -14,6 +15,8 @@ public class StockVO {
     private BigDecimal stockIncrease;
 
     private Long BuyOverQty;
+
+    private Date stockPriceDate;
 
     public String getStockID() {
         return stockID;
@@ -53,6 +56,14 @@ public class StockVO {
 
     public void setBuyOverQty(Long buyOverQty) {
         BuyOverQty = buyOverQty;
+    }
+
+    public Date getStockPriceDate() {
+        return stockPriceDate;
+    }
+
+    public void setStockPriceDate(Date stockPriceDate) {
+        this.stockPriceDate = stockPriceDate;
     }
 
     @Override
