@@ -98,12 +98,14 @@ public class CrawlingStrong {
         BigDecimal todayVal = new BigDecimal(0);
         BigDecimal backDaysVal = new BigDecimal(0);
 
-        for (int i = 0 ; i < dataJArr.length() ; i++) {
+        int hisDataLength = dataJArr.length()-1 ;
+
+        for (int i = hisDataLength ; i >= 0  ; i--) {
             BigDecimal wtxIndexByDay = convertor.convertStr2Decimal(convertor.getArrayByIdx(dataJArr, i)[4]);
-            System.out.println(wtxIndexByDay);
-            if (i == 0) {
+            if (i == hisDataLength) {
                 todayVal = wtxIndexByDay;
-            } else if (i == (days - 1)) {
+            }
+            if (i == hisDataLength - (days - 1)) {
                 backDaysVal = wtxIndexByDay;
             }
         }
