@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -18,6 +19,8 @@ import java.util.regex.Pattern;
 
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+
+import static java.time.format.DateTimeFormatter.BASIC_ISO_DATE;
 
 
 @Component
@@ -33,6 +36,8 @@ public class CrawlingStrong {
     }
 
     private static final String WTX_HISTORY = "https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?response=json";
+
+    private static final String WTX_HISTORY_LAST_MONTH = "https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?date=2023%S01&response=json";
 
     private static String STOCK_3DAYS_RISE_TOP = "https://concords.moneydj.com/z/zg/zg_A_0_%S.djhtm";
 
@@ -90,18 +95,27 @@ public class CrawlingStrong {
      * @throws IOException
      */
     private BigDecimal getWTXDiffByDays (int days) throws IOException {
+        JSONArray mergedDataJArr = new JSONArray();
+        BigDecimal todayVal = new BigDecimal(0);
+        BigDecimal backDaysVal = new BigDecimal(0);
 
         String response = requestSender.getRequester(WTX_HISTORY);
         JSONObject originData = new JSONObject(response);
         JSONArray dataJArr = originData.getJSONArray("data");
 
-        BigDecimal todayVal = new BigDecimal(0);
-        BigDecimal backDaysVal = new BigDecimal(0);
+        //如果dataJArr<=傳入天數，則需取到上月，並合併JSONArray
+        if (dataJArr.length() <= days) {
+            String lastMonth = LocalDate.now().minusMonths(1).format(BASIC_ISO_DATE).substring(4, 6);
+            String responseForLastMonth = requestSender.getRequester(String.format(WTX_HISTORY_LAST_MONTH,lastMonth));
+            JSONObject extraData = new JSONObject(responseForLastMonth);
+            JSONArray extraJArr = extraData.getJSONArray("data");
+            extraJArr.forEach(e -> { mergedDataJArr.put(e); });
+        }
+        dataJArr.forEach(e-> { mergedDataJArr.put(e); });
 
-        int hisDataLength = dataJArr.length()-1 ;
-
+        int hisDataLength = mergedDataJArr.length()-1 ;
         for (int i = hisDataLength ; i >= 0  ; i--) {
-            BigDecimal wtxIndexByDay = convertor.convertStr2Decimal(convertor.getArrayByIdx(dataJArr, i)[4]);
+            BigDecimal wtxIndexByDay = convertor.convertStr2Decimal(convertor.getArrayByIdx(mergedDataJArr, i)[4]);
             if (i == hisDataLength) {
                 todayVal = wtxIndexByDay;
             }
