@@ -9,6 +9,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.io.IOException;
 import java.time.LocalDate;
 
+import static java.time.format.DateTimeFormatter.BASIC_ISO_DATE;
+
 @SpringBootTest(classes = LineEchoRobotApplication.class)
 public class TestCrawling {
 
@@ -21,8 +23,9 @@ public class TestCrawling {
     @Test
     public void testCrawlingFunc() {
 //        System.out.println(crawlingBuySell.getBuyOverStockTop(1));
-        System.out.println(crawlingBuySell.getBuyOverStockTop(3));
+//        System.out.println(crawlingBuySell.getBuyOverStockTop(3));
 //        System.out.println(crawlingBuySell.getBuySellOver(""));
+        System.out.println();
     }
 
 //    @Test
