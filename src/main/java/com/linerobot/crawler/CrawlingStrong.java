@@ -37,7 +37,7 @@ public class CrawlingStrong {
 
     private static final String WTX_HISTORY = "https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?response=json";
 
-    private static final String WTX_HISTORY_LAST_MONTH = "https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?date=2023%S01&response=json";
+    private static final String WTX_HISTORY_LAST_MONTH = "https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?date=%S01&response=json";
 
     private static String STOCK_3DAYS_RISE_TOP = "https://concords.moneydj.com/z/zg/zg_A_0_%S.djhtm";
 
@@ -105,7 +105,7 @@ public class CrawlingStrong {
 
         //如果dataJArr<=傳入天數，則需取到上月，並合併JSONArray
         if (dataJArr.length() <= days) {
-            String lastMonth = LocalDate.now().minusMonths(1).format(BASIC_ISO_DATE).substring(4, 6);
+            String lastMonth = LocalDate.now().minusMonths(1).format(BASIC_ISO_DATE).substring(0, 6);
             String responseForLastMonth = requestSender.getRequester(String.format(WTX_HISTORY_LAST_MONTH,lastMonth));
             JSONObject extraData = new JSONObject(responseForLastMonth);
             JSONArray extraJArr = extraData.getJSONArray("data");
@@ -113,13 +113,13 @@ public class CrawlingStrong {
         }
         dataJArr.forEach(e-> { mergedDataJArr.put(e); });
 
-        int hisDataLength = mergedDataJArr.length()-1 ;
-        for (int i = hisDataLength ; i >= 0  ; i--) {
+        int historyDataLength = mergedDataJArr.length() - 1;
+        for (int i = historyDataLength ; i >= 0  ; i--) {
             BigDecimal wtxIndexByDay = convertor.convertStr2Decimal(convertor.getArrayByIdx(mergedDataJArr, i)[4]);
-            if (i == hisDataLength) {
+            if (i == historyDataLength) {
                 todayVal = wtxIndexByDay;
             }
-            if (i == hisDataLength - (days - 1)) {
+            if (i == historyDataLength - (days - 1)) {
                 backDaysVal = wtxIndexByDay;
             }
         }
