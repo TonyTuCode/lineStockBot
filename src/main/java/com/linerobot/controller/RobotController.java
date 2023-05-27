@@ -73,4 +73,10 @@ public class RobotController {
 		}
 		return false;
 	}
+
+	//測試連線使用
+	@GetMapping("/ping")
+	public void pingTest (){
+		System.out.println("====connection success====");
+	}
 }
