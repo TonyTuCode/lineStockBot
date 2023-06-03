@@ -22,10 +22,8 @@ import java.text.SimpleDateFormat;
 import java.time.*;
 import java.time.chrono.MinguoDate;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
+import java.util.stream.Collectors;
 
 
 public class TestScanCsv {
@@ -37,8 +35,7 @@ public class TestScanCsv {
      * 3.找出上漲區間回傳List<IncreasePeriodVO>
      * 4.將法人檔案寫成List<BuyOverVO>
      * 5.用串流filter過濾上漲區間
-     * 6.比對該區間誰的買超最多(該法人counter++)
-     * 7.回傳結果
+     * 6.比對該區間誰的買超最多(該法人counter++)，回傳結果
     */
 
     public static void main(String[] args) throws IOException, InterruptedException {
@@ -51,14 +48,58 @@ public class TestScanCsv {
 
         List<IncreasePeriodVO> analyzeResult = analyzeIncreaseFile(stockNum);
 
-        analyzeResult.forEach(e -> {
-            System.out.println("========= 事件"+e.getItemNumber()+": ============");
-            System.out.println("日期:"+e.getStartDate()+"到"+e.getEndDate());
-            System.out.println("漲幅:"+e.getIncreaseRate()+"%");
-        });
+        //收集所有區間資料
+        Set<BuyOverVO> buyOverHistoryData = collectBuyOverHistoryData(stockNum);
 
-//        List<BuyOverVO> buyOverHistoryData =
 
+        Integer invTruCtrl = 0, dealerCtrl = 0, foreignCtrl = 0;
+
+        for (IncreasePeriodVO eachResult : analyzeResult){
+
+            //過濾特定區間
+            List<BuyOverVO> findPeriod = buyOverHistoryData
+                    .stream()
+                    .filter( buyOverVO -> (buyOverVO.getDataDate().isAfter(eachResult.getStartDate()) ||
+                            buyOverVO.getDataDate().isEqual(eachResult.getStartDate()))
+                            && (buyOverVO.getDataDate().isBefore(eachResult.getEndDate()) ||
+                            buyOverVO.getDataDate().isEqual(eachResult.getEndDate()) ))
+                    .collect(Collectors.toList());
+
+            //計算期間總買超
+            Long dealerQtyTotal = 0L, invTruQtyTotal =  0L, foreignQtyTotal = 0L;
+            for (BuyOverVO eachDayBuy : findPeriod){
+                invTruQtyTotal += eachDayBuy.getInvTruQty();
+                dealerQtyTotal += eachDayBuy.getDealerQty();
+                foreignQtyTotal += eachDayBuy.getForeignQty();
+            }
+            Long[] totalArr = {invTruQtyTotal, dealerQtyTotal, foreignQtyTotal};
+            Long max = 0L;
+            Integer maxIdx = 0;
+            //找到位置
+            for (int i = 0 ; i < totalArr.length ; i++){
+                if (totalArr[i] > max){
+                    max = totalArr[i];
+                    maxIdx = i;
+                }
+            }
+            switch (maxIdx){
+                case 0:
+                    invTruCtrl++;
+                    break;
+                case 1:
+                    dealerCtrl++;
+                    break;
+                case 2:
+                    foreignCtrl++;
+                    break;
+            }
+            System.out.println(eachResult.getStartDate()+" ~ "+eachResult.getEndDate()+" 期間上漲" +eachResult.getIncreaseRate()+"%");
+            System.out.println("投信期間買超:" + invTruQtyTotal+" 自營期間買超:"+ dealerQtyTotal + " 外資期間買超:"+ foreignQtyTotal);
+            System.out.println("--------------------------------");
+        }
+
+        System.out.println("投信控盤次數:"+invTruCtrl+" 自營控盤次數:"+dealerCtrl+" 外資控盤次數:"+foreignCtrl);
+        System.out.println("===============================");
 
 
     }
@@ -125,10 +166,11 @@ public class TestScanCsv {
                 if (val.contains("Date") || val.contains("null")) {
                     continue;
                 }
+                String[] valArr = val.split(",");
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-                LocalDate dataDate = LocalDate.parse(val.split(",")[0],formatter);
-                String priceString = val.split(",")[4];
-                BigDecimal closePrice = BigDecimal.valueOf(Double.valueOf(priceString)).setScale(2, RoundingMode.HALF_UP);
+                LocalDate dataDate = LocalDate.parse(valArr[0],formatter);
+                String priceString = valArr[4];
+                BigDecimal closePrice = BigDecimal.valueOf(Double.valueOf(priceString)).setScale(0, RoundingMode.HALF_UP);
 
                 StockVO stockVO = new StockVO();
                 stockVO.setStockPriceDate(dataDate);
@@ -155,7 +197,6 @@ public class TestScanCsv {
                 ++counter;
             }
         }
-
         return increasePeriodVOList;
     }
 
@@ -167,10 +208,25 @@ public class TestScanCsv {
         downloadFile (url,String.format("D://StockFiles/increase/%Sincrease.csv", stockNum));
     }
 
-    private static void collectBuyOverHistoryData() {
+    private static Set<BuyOverVO> collectBuyOverHistoryData(String stockNum) throws FileNotFoundException {
+        Scanner sc = new Scanner(new File(String.format("D://StockFiles/buyover/%SBuyover.csv", stockNum)));
+        sc.useDelimiter("\n");
+        Set<BuyOverVO> buyOverHistoryData = new HashSet<>();
+        while (sc.hasNext()){
+            String val = sc.next();
+            String[] valArr = val.split(",");
 
+            BuyOverVO buyOverVO = new BuyOverVO();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyy/MM/dd");
+            LocalDate adDate = LocalDate.parse(valArr[0].trim(), formatter).plusYears(1911);
 
-
+            buyOverVO.setDataDate(adDate);
+            buyOverVO.setInvTruQty(Long.parseLong(valArr[1].trim()));
+            buyOverVO.setDealerQty(Long.parseLong(valArr[2].trim()));
+            buyOverVO.setForeignQty(Long.parseLong(valArr[3].trim()));
+            buyOverHistoryData.add(buyOverVO);
+        }
+        return buyOverHistoryData;
     }
 
     //比較2個bigDecimal
