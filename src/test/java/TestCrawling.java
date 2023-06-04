@@ -1,5 +1,6 @@
 import com.linerobot.LineEchoRobotApplication;
 import com.linerobot.crawler.BuySellCrawler;
+import com.linerobot.crawler.DominatorCrawler;
 import com.linerobot.crawler.StrongCrawler;
 import com.linerobot.handler.MenuCode;
 import org.junit.jupiter.api.Test;
@@ -18,12 +19,16 @@ public class TestCrawling {
     @Autowired
     StrongCrawler strongCrawler;
 
-    @Test
+    @Autowired
+    DominatorCrawler dominatorCrawler;
+
+
+
+//    @Test
     public void testCrawlingFunc() {
-//        System.out.println(crawlingBuySell.getBuyOverStockTop(1));
-//        System.out.println(crawlingBuySell.getBuyOverStockTop(3));
-//        System.out.println(crawlingBuySell.getBuySellOver(""));
-        System.out.println();
+        System.out.println(buySellCrawler.getBuyOverStockTop(1));
+        System.out.println(buySellCrawler.getBuyOverStockTop(3));
+        System.out.println(buySellCrawler.getBuySellOver(""));
     }
 
 //    @Test
@@ -40,6 +45,15 @@ public class TestCrawling {
 //    @Test
     public void testWeek(){
         System.out.println(LocalDate.now().getDayOfWeek().getValue());
+    }
+
+    @Test
+    public void testDominate(){
+        try {
+            System.out.println(dominatorCrawler.dominateCrawlingAndAnalyze("2303"));
+        } catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
 
