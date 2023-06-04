@@ -42,7 +42,7 @@ public class TestScanCsv {
 
         String stockNum = "2303";
 
-//        downloadIncreaseFile(stockNum ,60);
+        downloadIncreaseFile(stockNum ,60);
 
 //        downloadBuyOverFile(stockNum ,60);
 
@@ -105,7 +105,7 @@ public class TestScanCsv {
     }
 
     private static void downloadBuyOverFile(String stockNum , Integer months) throws IOException, InterruptedException {
-        String filePath = String.format("D://StockFiles/buyover/%SBuyover.csv", stockNum);
+        String filePath = String.format("/%SBuyover.csv", stockNum);  //D://StockFiles/buyover/%SBuyover.csv
         FileOutputStream fos = new FileOutputStream(filePath,true);
         BufferedOutputStream bos = new BufferedOutputStream(fos);
 
@@ -205,11 +205,11 @@ public class TestScanCsv {
         long pastTime = getTimestamp8amByBackMonths( months - 1 );
         String rawUrl = "https://query1.finance.yahoo.com/v7/finance/download/%S.TW?period1=%S&period2=%S&interval=1d&events=history&includeAdjustedClose=true";
         String url = String.format(rawUrl,stockNum,pastTime,currentTime);
-        downloadFile (url,String.format("D://StockFiles/increase/%Sincrease.csv", stockNum));
+        downloadFile (url,String.format("./StockFiles/increase/%Sincrease.csv", stockNum)); //D://StockFiles/increase/
     }
 
     private static Set<BuyOverVO> collectBuyOverHistoryData(String stockNum) throws FileNotFoundException {
-        Scanner sc = new Scanner(new File(String.format("D://StockFiles/buyover/%SBuyover.csv", stockNum)));
+        Scanner sc = new Scanner(new File(String.format("./StockFiles/buyover/%SBuyover.csv", stockNum)));
         sc.useDelimiter("\n");
         Set<BuyOverVO> buyOverHistoryData = new HashSet<>();
         while (sc.hasNext()){

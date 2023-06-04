@@ -15,13 +15,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import static java.time.format.DateTimeFormatter.BASIC_ISO_DATE;
 @Component
-public class CrawlingBuySell {
+public class BuySellCrawler {
 
 	private Convertor convertor;
 
 	private RequestSender requestSender;
 
-	public CrawlingBuySell (Convertor convertor,RequestSender requestSender) {
+	public BuySellCrawler(Convertor convertor, RequestSender requestSender) {
 		this.convertor = convertor;
 		this.requestSender = requestSender;
 	}

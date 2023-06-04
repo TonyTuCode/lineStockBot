@@ -1,6 +1,6 @@
 import com.linerobot.LineEchoRobotApplication;
-import com.linerobot.crawler.CrawlingBuySell;
-import com.linerobot.crawler.CrawlingStrong;
+import com.linerobot.crawler.BuySellCrawler;
+import com.linerobot.crawler.StrongCrawler;
 import com.linerobot.handler.MenuCode;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,16 +9,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.io.IOException;
 import java.time.LocalDate;
 
-import static java.time.format.DateTimeFormatter.BASIC_ISO_DATE;
-
 @SpringBootTest(classes = LineEchoRobotApplication.class)
 public class TestCrawling {
 
     @Autowired
-    CrawlingBuySell crawlingBuySell;
+    BuySellCrawler buySellCrawler;
 
     @Autowired
-    CrawlingStrong crawlingStrong;
+    StrongCrawler strongCrawler;
 
     @Test
     public void testCrawlingFunc() {
@@ -30,7 +28,7 @@ public class TestCrawling {
 
 //    @Test
     public void testCrawlingStrong() throws IOException {
-        System.out.println(crawlingStrong.getRiseTop(3));
+        System.out.println(strongCrawler.getRiseTop(3));
     }
 
 //    @Test

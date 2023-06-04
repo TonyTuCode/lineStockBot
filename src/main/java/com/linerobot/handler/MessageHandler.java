@@ -1,18 +1,14 @@
 package com.linerobot.handler;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import com.linerobot.crawler.CrawlingBuySell;
-import com.linerobot.crawler.CrawlingStrong;
+import com.linerobot.crawler.BuySellCrawler;
+import com.linerobot.crawler.StrongCrawler;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -28,15 +24,15 @@ public class MessageHandler {
 
     private static final String LINE_MSG_API = "https://api.line.me/v2/bot/message/reply";
 
-    private CrawlingBuySell crawlingBuySell;
+    private BuySellCrawler buySellCrawler;
 
-    private CrawlingStrong crawlingStrong;
+    private StrongCrawler strongCrawler;
 
     private MenuCode menuCode;
 
-    public MessageHandler (CrawlingBuySell crawlingBuySell,CrawlingStrong crawlingStrong,MenuCode menuCode){
-        this.crawlingBuySell = crawlingBuySell;
-        this.crawlingStrong = crawlingStrong;
+    public MessageHandler (BuySellCrawler buySellCrawler, StrongCrawler strongCrawler, MenuCode menuCode){
+        this.buySellCrawler = buySellCrawler;
+        this.strongCrawler = strongCrawler;
         this.menuCode = menuCode;
     }
 
@@ -58,24 +54,24 @@ public class MessageHandler {
                 sendLinePlatform(textBuyMenu(token));
                 break;
             case MenuCode.DAILY_REPORT:
-                sendLinePlatform(text(token, crawlingBuySell.getBuySellOver("")));
+                sendLinePlatform(text(token, buySellCrawler.getBuySellOver("")));
                 break;
             case MenuCode.HIS_DAY_REPORT:
                 String date = evenText.substring(3, evenText.length());
-                sendLinePlatform(text(token, crawlingBuySell.getBuySellOver(date)));
+                sendLinePlatform(text(token, buySellCrawler.getBuySellOver(date)));
                 break;
             case MenuCode.STRONGER_THAN_WTX:
                 String days = evenText.substring(6, evenText.length());
-                sendLinePlatform(text(token, crawlingStrong.getRiseTop(Integer.valueOf(days))));
+                sendLinePlatform(text(token, strongCrawler.getRiseTop(Integer.valueOf(days))));
                 break;
             case MenuCode.FOREIGN_BUY:
-                sendLinePlatform(text(token, crawlingBuySell.getBuyOverStockTop(1)));
+                sendLinePlatform(text(token, buySellCrawler.getBuyOverStockTop(1)));
                 break;
             case MenuCode.INV_TRU_BUY:
-                sendLinePlatform(text(token, crawlingBuySell.getBuyOverStockTop(2)));
+                sendLinePlatform(text(token, buySellCrawler.getBuyOverStockTop(2)));
                 break;
             case MenuCode.FOREIGN_INV_TOGETHER_BUY:
-                sendLinePlatform(text(token, crawlingBuySell.getBuyOverStockTop(3)));
+                sendLinePlatform(text(token, buySellCrawler.getBuyOverStockTop(3)));
                 break;
         }
     }

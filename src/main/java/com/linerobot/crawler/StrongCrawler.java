@@ -24,13 +24,13 @@ import static java.time.format.DateTimeFormatter.BASIC_ISO_DATE;
 
 
 @Component
-public class CrawlingStrong {
+public class StrongCrawler {
 
     private Convertor convertor;
 
     private RequestSender requestSender;
 
-    public CrawlingStrong (Convertor convertor, RequestSender requestSender) {
+    public StrongCrawler(Convertor convertor, RequestSender requestSender) {
         this.convertor = convertor;
         this.requestSender = requestSender;
     }
