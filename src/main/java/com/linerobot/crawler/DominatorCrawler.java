@@ -16,6 +16,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -51,11 +54,18 @@ public class DominatorCrawler {
 
         StringBuffer finalAnalyzeResult = new StringBuffer();
 
-        // TODO 判斷何時不需再下載
-        this.downloadIncreaseFile(stockNum ,PERIOD_MONTH);
+        Path increaseFile = Paths.get(String.format(INCREASE_PATH, stockNum));
 
-        // TODO 判斷何時不需再下載
-        this.downloadBuyOverFile(stockNum ,PERIOD_MONTH);
+        Path buyoverFile = Paths.get(String.format(BUYOVER_PATH, stockNum));
+
+        // 只要其中一個不存在就刪掉重撈
+        if (Files.notExists(increaseFile) || Files.notExists(buyoverFile)) {
+            System.out.println("檔案不存在，先將檔案清除後重新下載");
+            Files.deleteIfExists(increaseFile);
+            Files.deleteIfExists(buyoverFile);
+            this.downloadIncreaseFile(stockNum ,PERIOD_MONTH);
+            this.downloadBuyOverFile(stockNum ,PERIOD_MONTH);
+        }
 
         //收集上漲區間資料
         List<IncreasePeriodVO> increaseAnalyzeResult = this.analyzeIncreaseFile(stockNum);
@@ -86,7 +96,7 @@ public class DominatorCrawler {
             Long max = 0L;
             Integer maxIdx = 0;
 
-            //找最大值位置，判斷哪個
+            //找最大值位置，判斷哪個位置數量最大
             for (int i = 0 ; i < totalArr.length ; i++){
                 if (totalArr[i] > max){
                     maxIdx = i;
