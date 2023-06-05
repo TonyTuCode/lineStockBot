@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import com.linerobot.crawler.BuySellCrawler;
+import com.linerobot.crawler.DominatorCrawler;
 import com.linerobot.crawler.StrongCrawler;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -28,11 +29,14 @@ public class MessageHandler {
 
     private StrongCrawler strongCrawler;
 
+    private DominatorCrawler dominatorCrawler;
+
     private MenuCode menuCode;
 
-    public MessageHandler (BuySellCrawler buySellCrawler, StrongCrawler strongCrawler, MenuCode menuCode){
+    public MessageHandler (BuySellCrawler buySellCrawler, StrongCrawler strongCrawler,DominatorCrawler dominatorCrawler, MenuCode menuCode){
         this.buySellCrawler = buySellCrawler;
         this.strongCrawler = strongCrawler;
+        this.dominatorCrawler = dominatorCrawler;
         this.menuCode = menuCode;
     }
 
@@ -73,6 +77,16 @@ public class MessageHandler {
             case MenuCode.FOREIGN_INV_TOGETHER_BUY:
                 sendLinePlatform(text(token, buySellCrawler.getBuyOverStockTop(3)));
                 break;
+            case MenuCode.DOMINATOR:
+                String stockNum = evenText.substring(4, evenText.length());
+                String analyzeResult = "";
+                try {
+                    analyzeResult = dominatorCrawler.dominateCrawlingAndAnalyze(stockNum);
+                } catch (Exception e){
+                    e.printStackTrace();
+                    analyzeResult = "系統錯誤，請重新確認後再試";
+                }
+                sendLinePlatform(text(token, analyzeResult));
         }
     }
 
@@ -105,6 +119,9 @@ public class MessageHandler {
         }
         if (eventText.equals("togetherbuy")){
             return MenuCode.FOREIGN_INV_TOGETHER_BUY;
+        }
+        if (eventText.matches("ctrl{1}[a-zA-Z0-9]*")){
+            return MenuCode.DOMINATOR;
         }
 
         return 0;

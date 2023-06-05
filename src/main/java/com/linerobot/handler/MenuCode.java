@@ -32,6 +32,9 @@ public class MenuCode {
     /** 土洋合力買超*/
     public static final int FOREIGN_INV_TOGETHER_BUY = 6;
 
+    /** 認養股分析*/
+    public static final int DOMINATOR = 7;
+
     public String getMenu (){
         StringBuilder menu = new StringBuilder();
         menu.append("指令表(不分大小寫)");
@@ -44,6 +47,7 @@ public class MenuCode {
         menu.append("\nforeignbuy: 外資3日買超");
         menu.append("\ninvtrubuy: 投信3日買超");
         menu.append("\ntogetherbuy: 土洋合攻3日買超");
+        menu.append("\nctrl+股號: 認養股分析");
         return menu.toString();
     }
 

@@ -111,10 +111,12 @@ public class DominatorCrawler {
                     break;
             }
             finalAnalyzeResult.append("●"+eachResult.getStartDate()+" ~ ");
-            finalAnalyzeResult.append(eachResult.getEndDate()+" 期間上漲" +eachResult.getIncreaseRate()+"%");
-            finalAnalyzeResult.append("投信期間買超:" + invTruQtyTotal+" 自營期間買超:"+ dealerQtyTotal + " 外資期間買超:"+ foreignQtyTotal+"\n");
+            finalAnalyzeResult.append(eachResult.getEndDate()+" 期間上漲" +eachResult.getIncreaseRate()+"%\n");
+            finalAnalyzeResult.append("投信期間買超:" + invTruQtyTotal+"\n");
+            finalAnalyzeResult.append("自營期間買超:"+ dealerQtyTotal+"\n");
+            finalAnalyzeResult.append("外資期間買超:"+ foreignQtyTotal+"\n");
         }
-        finalAnalyzeResult.append("===============================\n");
+        finalAnalyzeResult.append("========================\n");
         finalAnalyzeResult.append("投信控盤次數:"+invTruCtrl);
         finalAnalyzeResult.append(" 自營控盤次數:"+dealerCtrl);
         finalAnalyzeResult.append(" 外資控盤次數:"+foreignCtrl);
