@@ -41,9 +41,9 @@ public class DominatorCrawler {
 
     private static int PERIOD_MONTH = 60;
 
-    private static String INCREASE_PATH = "./StockFiles/increase/%Sincrease.csv";
+    private static String INCREASE_PATH = "./stockFiles/increase/%Sincrease.csv";
 
-    private static String BUYOVER_PATH = "./StockFiles/buyover/%SBuyover.csv";
+    private static String BUYOVER_PATH = "./stockFiles/buyover/%SBuyover.csv";
 
     /**
      * get 個股主導籌碼
