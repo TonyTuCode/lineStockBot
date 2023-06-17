@@ -41,16 +41,18 @@ public class DominatorCrawler {
 
     private static int PERIOD_MONTH = 60;
 
-    private static String INCREASE_PATH = "./stockFiles/increase/%Sincrease.csv";
+    private static String STOCK_FILE_DIR = "./stockFiles";
 
-    private static String BUYOVER_PATH = "./stockFiles/buyover/%SBuyover.csv";
+    private static String INCREASE_PATH = "./stockFiles/%Sincrease.csv";
+
+    private static String BUYOVER_PATH = "./stockFiles/%SBuyover.csv";
 
     /**
      * get 個股主導籌碼
      * @Param stockNum 股票號碼
      * @return finalAnalyzeResult
      */
-    public String dominateCrawlingAndAnalyze(String stockNum) throws IOException, InterruptedException {
+    public String dominateCrawlingAndAnalyze(String stockNum) {
 
         StringBuffer finalAnalyzeResult = new StringBuffer();
 
@@ -58,20 +60,42 @@ public class DominatorCrawler {
 
         Path buyoverFile = Paths.get(String.format(BUYOVER_PATH, stockNum));
 
+        //先確認目錄創建完畢，避免錯誤
+        Path path = Paths.get(STOCK_FILE_DIR);
+        try {
+            Files.createDirectories(path);
+            System.out.println("目錄成功創建或已存在： " + path);
+        } catch (IOException e) {
+            System.err.println("目錄創建失敗: " + path);
+            e.printStackTrace();
+        }
+
         // 只要其中一個不存在就刪掉重撈
         if (Files.notExists(increaseFile) || Files.notExists(buyoverFile)) {
             System.out.println("檔案不存在，先將檔案清除後重新下載");
-            Files.deleteIfExists(increaseFile);
-            Files.deleteIfExists(buyoverFile);
-            this.downloadIncreaseFile(stockNum ,PERIOD_MONTH);
-            this.downloadBuyOverFile(stockNum ,PERIOD_MONTH);
+            try {
+                Files.deleteIfExists(increaseFile);
+                Files.deleteIfExists(buyoverFile);
+                this.downloadIncreaseFile(stockNum ,PERIOD_MONTH);
+                this.downloadBuyOverFile(stockNum ,PERIOD_MONTH);
+            } catch (IOException ioe){
+                ioe.printStackTrace();
+                return "來源網站無該股票資料。";
+            } catch (InterruptedException ie){
+                ie.printStackTrace();
+            }
         }
 
-        //收集上漲區間資料
-        List<IncreasePeriodVO> increaseAnalyzeResult = this.analyzeIncreaseFile(stockNum);
-
-        //收集所有區間資料
-        Set<BuyOverVO> buyOverHistoryData = this.collectBuyOverHistoryData(stockNum);
+        List<IncreasePeriodVO> increaseAnalyzeResult = new ArrayList<>();
+        Set<BuyOverVO> buyOverHistoryData = new HashSet<>();
+        try {
+            //收集上漲區間資料
+            increaseAnalyzeResult = this.analyzeIncreaseFile(stockNum);
+            //收集所有區間資料
+            buyOverHistoryData = this.collectBuyOverHistoryData(stockNum);
+        } catch (IOException ioe){
+            ioe.printStackTrace();
+        }
 
         Integer invTruCtrl = 0, dealerCtrl = 0, foreignCtrl = 0;
 
