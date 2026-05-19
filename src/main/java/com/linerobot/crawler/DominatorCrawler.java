@@ -4,6 +4,8 @@ import com.linerobot.tools.SSLHelper;
 import com.linerobot.vo.BuyOverVO;
 import com.linerobot.vo.IncreasePeriodVO;
 import com.linerobot.vo.StockVO;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
@@ -11,17 +13,12 @@ import org.springframework.stereotype.Component;
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.chrono.MinguoDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -46,6 +43,9 @@ public class DominatorCrawler {
     private static String INCREASE_PATH = "./stockFiles/%Sincrease.csv";
 
     private static String BUYOVER_PATH = "./stockFiles/%SBuyover.csv";
+
+    private static final String FINMIND_STOCK_PRICE_URL =
+            "https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=%s&start_date=%s&end_date=%s";
 
     /**
      * get 個股主導籌碼
@@ -83,6 +83,8 @@ public class DominatorCrawler {
                 return "來源網站無該股票資料。";
             } catch (InterruptedException ie){
                 ie.printStackTrace();
+                Thread.currentThread().interrupt();
+                return "主力分析資料下載中斷，請稍後再試。";
             }
         }
 
@@ -123,6 +125,7 @@ public class DominatorCrawler {
             //找最大值位置，判斷哪個位置數量最大
             for (int i = 0 ; i < totalArr.length ; i++){
                 if (totalArr[i] > max){
+                    max = totalArr[i];
                     maxIdx = i;
                 }
             }
@@ -192,15 +195,6 @@ public class DominatorCrawler {
         return url;
     }
 
-    //取得指定時間戳
-    private Long getTimestamp8amByBackMonths (Integer backMonths) {
-        LocalDateTime backMonthDateTime = LocalDateTime.now().minusMonths(backMonths);
-        LocalDateTime  backMonthDateTimeSet8am=  backMonthDateTime.withHour(8).withMinute(0).withSecond(0).withNano(0);
-        Long timestamp =backMonthDateTimeSet8am.toEpochSecond(ZoneOffset.ofHours(8));
-        return  timestamp;
-    }
-
-
     private List<IncreasePeriodVO> analyzeIncreaseFile (String stockNum) throws FileNotFoundException {
         Scanner sc = new Scanner(new File(String.format(INCREASE_PATH, stockNum)));
         sc.useDelimiter("\n");
@@ -245,12 +239,100 @@ public class DominatorCrawler {
         return increasePeriodVOList;
     }
 
-    private void downloadIncreaseFile(String stockNum , Integer months) throws IOException {
-        long currentTime = getTimestamp8amByBackMonths(0);
-        long pastTime = getTimestamp8amByBackMonths( months - 1 );
-        String rawUrl = "https://query1.finance.yahoo.com/v7/finance/download/%S.TW?period1=%S&period2=%S&interval=1d&events=history&includeAdjustedClose=true";
-        String url = String.format(rawUrl,stockNum,pastTime,currentTime);
-        downloadFile (url,String.format(INCREASE_PATH, stockNum));
+    private void downloadIncreaseFile(String stockNum , Integer months) throws IOException, InterruptedException {
+        String filePath = String.format(INCREASE_PATH, stockNum);
+        int rowCount = 0;
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusMonths(months - 1).withDayOfMonth(1);
+        JSONObject originData = new JSONObject(readJsonUrlWithRetry(
+                String.format(FINMIND_STOCK_PRICE_URL, stockNum, startDate, endDate)));
+        JSONArray data = originData.optJSONArray("data");
+        if (originData.optInt("status") != 200 || data == null) {
+            throw new IOException("FinMind returned no price data for stock: " + stockNum);
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filePath), "UTF-8"))) {
+            writer.write("Date,Open,High,Low,Close,Adj Close,Volume");
+            writer.newLine();
+
+            for (int i = 0; i < data.length(); i++) {
+                JSONObject row = data.getJSONObject(i);
+                if (!isValidFinMindPriceRow(row)) {
+                    continue;
+                }
+                writer.write(String.join(",",
+                        row.getString("date"),
+                        row.get("open").toString(),
+                        row.get("max").toString(),
+                        row.get("min").toString(),
+                        row.get("close").toString(),
+                        row.get("close").toString(),
+                        row.get("Trading_Volume").toString()));
+                writer.newLine();
+                rowCount++;
+            }
+        }
+
+        if (rowCount == 0) {
+            throw new IOException("FinMind returned no price rows for stock: " + stockNum);
+        }
+    }
+
+    private boolean isValidFinMindPriceRow(JSONObject row) {
+        return row.has("date")
+                && row.has("open")
+                && row.has("max")
+                && row.has("min")
+                && row.has("close")
+                && row.has("Trading_Volume");
+    }
+
+    private String readJsonUrlWithRetry(String urlStr) throws IOException, InterruptedException {
+        IOException lastException = null;
+        for (int tryCount = 1; tryCount <= 3; tryCount++) {
+            try {
+                String response = readUrl(urlStr).trim();
+                if (response.startsWith("{")) {
+                    return response;
+                }
+                lastException = new IOException("Non JSON response: " +
+                        response.substring(0, Math.min(120, response.length())));
+            } catch (IOException e) {
+                lastException = e;
+            }
+            Thread.currentThread().sleep(tryCount * 1500L);
+        }
+        throw lastException;
+    }
+
+    private String readUrl(String urlStr) throws IOException {
+        SSLHelper.init();
+        URL url = new URL(urlStr);
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        con.setConnectTimeout(15000);
+        con.setReadTimeout(15000);
+        con.setRequestProperty("Accept", "application/json, text/plain, */*");
+        con.setRequestProperty("Accept-Language", "zh-TW,zh;q=0.9,en;q=0.8");
+        con.setRequestProperty("User-Agent", "Mozilla/5.0");
+        if (urlStr.contains("twse.com.tw")) {
+            con.setRequestProperty("Referer", "https://www.twse.com.tw/zh/trading/historical/stock-day.html");
+        }
+        String finMindToken = System.getProperty("finmind.token", System.getenv("FINMIND_TOKEN"));
+        if (finMindToken != null && !finMindToken.trim().isEmpty()) {
+            con.setRequestProperty("Authorization", "Bearer " + finMindToken.trim());
+        }
+        StringBuilder response = new StringBuilder();
+        InputStream inputStream = con.getResponseCode() >= 400 ? con.getErrorStream() : con.getInputStream();
+        if (inputStream == null) {
+            throw new IOException("Empty response from: " + urlStr);
+        }
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"))) {
+            String inputLine;
+            while ((inputLine = in.readLine()) != null) {
+                response.append(inputLine);
+            }
+        }
+        return response.toString();
     }
 
     private Set<BuyOverVO> collectBuyOverHistoryData(String stockNum) throws FileNotFoundException {
@@ -281,18 +363,4 @@ public class DominatorCrawler {
         return increasePercent;
     }
 
-    private static void downloadFile (String urlStr ,String destStr) throws IOException{
-        URL url = new URL(urlStr);
-        ReadableByteChannel src = Channels.newChannel(url.openStream());
-        FileChannel dest = new FileOutputStream(destStr).getChannel();
-        ByteBuffer buffer = ByteBuffer.allocate(1024); //設定Buffer大小
-
-        try (src ; dest) {
-            while (src.read(buffer) != -1){
-                buffer.flip();  //set limit to current position, position to 0, so it can read from start
-                dest.write(buffer);
-                buffer.clear(); //init the buffer ,set position to 0, limit to max
-            }
-        }
-    }
 }
