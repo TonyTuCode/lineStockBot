@@ -21,6 +21,7 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.chrono.MinguoDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -47,6 +48,9 @@ public class DominatorCrawler {
     private static final String FINMIND_STOCK_PRICE_URL =
             "https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=%s&start_date=%s&end_date=%s";
 
+    private static final String FINMIND_INVESTOR_BUY_SELL_URL =
+            "https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInstitutionalInvestorsBuySell&data_id=%s&start_date=%s&end_date=%s";
+
     /**
      * get 個股主導籌碼
      * @Param stockNum 股票號碼
@@ -71,13 +75,19 @@ public class DominatorCrawler {
         }
 
         // 只要其中一個不存在就刪掉重撈
-        if (Files.notExists(increaseFile) || Files.notExists(buyoverFile)) {
-            System.out.println("檔案不存在，先將檔案清除後重新下載");
+        boolean needDownloadIncrease = Files.notExists(increaseFile);
+        boolean needDownloadBuyOver = Files.notExists(buyoverFile) || isBuyOverHistoryInsufficient(stockNum, PERIOD_MONTH);
+        if (needDownloadIncrease || needDownloadBuyOver) {
+            System.out.println("檔案不存在或歷史資料不足，先將檔案清除後重新下載");
             try {
-                Files.deleteIfExists(increaseFile);
-                Files.deleteIfExists(buyoverFile);
-                this.downloadIncreaseFile(stockNum ,PERIOD_MONTH);
-                this.downloadBuyOverFile(stockNum ,PERIOD_MONTH);
+                if (needDownloadIncrease) {
+                    Files.deleteIfExists(increaseFile);
+                    this.downloadIncreaseFile(stockNum ,PERIOD_MONTH);
+                }
+                if (needDownloadBuyOver) {
+                    Files.deleteIfExists(buyoverFile);
+                    this.downloadBuyOverFile(stockNum ,PERIOD_MONTH);
+                }
             } catch (IOException ioe){
                 ioe.printStackTrace();
                 return "來源網站無該股票資料。";
@@ -154,6 +164,62 @@ public class DominatorCrawler {
     //下載買超
     private void downloadBuyOverFile(String stockNum , Integer months) throws IOException, InterruptedException {
         String filePath = String.format(BUYOVER_PATH, stockNum);
+        if (months != null) {
+            LocalDate endDate = LocalDate.now();
+            LocalDate startDate = endDate.minusMonths(months - 1).withDayOfMonth(1);
+            JSONObject originData = new JSONObject(readJsonUrlWithRetry(
+                    String.format(FINMIND_INVESTOR_BUY_SELL_URL, stockNum, startDate, endDate)));
+            JSONArray data = originData.optJSONArray("data");
+            if (originData.optInt("status") != 200 || data == null) {
+                throw new IOException("FinMind returned no investor buy sell data for stock: " + stockNum);
+            }
+
+            NavigableMap<LocalDate, long[]> buyOverByDate = new TreeMap<>();
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            for (int i = 0; i < data.length(); i++) {
+                JSONObject row = data.getJSONObject(i);
+                if (!isValidFinMindInvestorRow(row)) {
+                    continue;
+                }
+
+                LocalDate dataDate = LocalDate.parse(row.getString("date"), dateFormatter);
+                long netShares = row.optLong("buy") - row.optLong("sell");
+                long[] buyOver = buyOverByDate.computeIfAbsent(dataDate, key -> new long[3]);
+                switch (row.optString("name")) {
+                    case "Investment_Trust":
+                        buyOver[0] += netShares;
+                        break;
+                    case "Dealer_self":
+                    case "Dealer_Hedging":
+                        buyOver[1] += netShares;
+                        break;
+                    case "Foreign_Investor":
+                    case "Foreign_Dealer_Self":
+                        buyOver[2] += netShares;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            if (buyOverByDate.isEmpty()) {
+                throw new IOException("FinMind returned no investor buy sell rows for stock: " + stockNum);
+            }
+
+            DateTimeFormatter minguoFormatter = DateTimeFormatter.ofPattern("yyy/MM/dd");
+            try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filePath), "UTF-8"))) {
+                for (Map.Entry<LocalDate, long[]> entry : buyOverByDate.descendingMap().entrySet()) {
+                    long[] buyOver = entry.getValue();
+                    writer.write(String.format("%s , %s , %s , %s",
+                            minguoFormatter.format(MinguoDate.from(entry.getKey())),
+                            convertSharesToLots(buyOver[0]),
+                            convertSharesToLots(buyOver[1]),
+                            convertSharesToLots(buyOver[2])));
+                    writer.newLine();
+                }
+            }
+            return;
+        }
         FileOutputStream fos = new FileOutputStream(filePath,true);
         BufferedOutputStream bos = new BufferedOutputStream(fos);
 
@@ -183,6 +249,37 @@ public class DominatorCrawler {
 
 
     //取得by月份網址
+    private boolean isBuyOverHistoryInsufficient(String stockNum, Integer months) {
+        try {
+            Set<BuyOverVO> buyOverHistoryData = collectBuyOverHistoryData(stockNum);
+            if (buyOverHistoryData.isEmpty()) {
+                return true;
+            }
+            LocalDate firstNeededDate = LocalDate.now().minusMonths(months - 1).withDayOfMonth(1);
+            LocalDate earliestDate = buyOverHistoryData.stream()
+                    .map(BuyOverVO::getDataDate)
+                    .filter(Objects::nonNull)
+                    .min(LocalDate::compareTo)
+                    .orElse(LocalDate.MAX);
+            return earliestDate.isAfter(firstNeededDate.plusMonths(1));
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    private boolean isValidFinMindInvestorRow(JSONObject row) {
+        return row.has("date")
+                && row.has("name")
+                && row.has("buy")
+                && row.has("sell");
+    }
+
+    private long convertSharesToLots(long shareQty) {
+        return BigDecimal.valueOf(shareQty)
+                .divide(BigDecimal.valueOf(1000), 0, RoundingMode.HALF_UP)
+                .longValue();
+    }
+
     private String getBeforeMonthUrlByStockNum (String stockNum, Integer backMonth){
         String rawUrl = "https://stock.wearn.com/netbuy.asp?Year=%S&month=%S&kind=%S";
         LocalDate beforeDate = LocalDate.now().minusMonths(backMonth);
@@ -198,7 +295,7 @@ public class DominatorCrawler {
     private List<IncreasePeriodVO> analyzeIncreaseFile (String stockNum) throws FileNotFoundException {
         Scanner sc = new Scanner(new File(String.format(INCREASE_PATH, stockNum)));
         sc.useDelimiter("\n");
-        List<StockVO> dataList = new LinkedList();
+        List<StockVO> dataList = new LinkedList<>();
         while (sc.hasNext()) {  //returns a boolean value
             try {
                 String val = sc.next();
@@ -206,16 +303,22 @@ public class DominatorCrawler {
                     continue;
                 }
                 String[] valArr = val.split(",");
+                if (valArr.length <= 4) {
+                    continue;
+                }
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-                LocalDate dataDate = LocalDate.parse(valArr[0],formatter);
-                String priceString = valArr[4];
-                BigDecimal closePrice = BigDecimal.valueOf(Double.valueOf(priceString)).setScale(0, RoundingMode.HALF_UP);
+                LocalDate dataDate = LocalDate.parse(valArr[0].trim(),formatter);
+                String priceString = valArr[4].trim();
+                BigDecimal closePrice = new BigDecimal(priceString).setScale(2, RoundingMode.HALF_UP);
+                if (closePrice.compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
 
                 StockVO stockVO = new StockVO();
                 stockVO.setStockPriceDate(dataDate);
                 stockVO.setStockPrice(closePrice);
                 dataList.add(stockVO);
-            } catch (NumberFormatException ne) {
+            } catch (NumberFormatException | DateTimeParseException ne) {
                 ne.printStackTrace();
             }
         }
@@ -225,13 +328,14 @@ public class DominatorCrawler {
         //5天內上漲10%的區間
         List<IncreasePeriodVO> increasePeriodVOList = new LinkedList<>();
         for (int i = 0; i < dataList.size() - 4; i++) {
-            if ((countIncRate(dataList.get(i).getStockPrice(), dataList.get(i + 4).getStockPrice()).compareTo(new BigDecimal(15))) == 1) {
+            BigDecimal increaseRate = countIncRate(dataList.get(i).getStockPrice(), dataList.get(i + 4).getStockPrice());
+            if (increaseRate.compareTo(BigDecimal.valueOf(15)) > 0) {
                 //拿到起始日期與結束日期
                 IncreasePeriodVO increaseVO = new IncreasePeriodVO();
                 increaseVO.setItemNumber(counter);
                 increaseVO.setStartDate(dataList.get(i).getStockPriceDate());
                 increaseVO.setEndDate(dataList.get(i + 4).getStockPriceDate());
-                increaseVO.setIncreaseRate(countIncRate(dataList.get(i).getStockPrice(), dataList.get(i + 4).getStockPrice()));
+                increaseVO.setIncreaseRate(increaseRate);
                 increasePeriodVOList.add(increaseVO);
                 ++counter;
             }
@@ -336,31 +440,41 @@ public class DominatorCrawler {
     }
 
     private Set<BuyOverVO> collectBuyOverHistoryData(String stockNum) throws FileNotFoundException {
-        Scanner sc = new Scanner(new File(String.format(BUYOVER_PATH, stockNum)));
-        sc.useDelimiter("\n");
         Set<BuyOverVO> buyOverHistoryData = new HashSet<>();
-        while (sc.hasNext()){
-            String val = sc.next();
-            String[] valArr = val.split(",");
+        try (Scanner sc = new Scanner(new File(String.format(BUYOVER_PATH, stockNum)))) {
+            sc.useDelimiter("\n");
+            while (sc.hasNext()){
+                try {
+                    String val = sc.next();
+                    String[] valArr = val.split(",");
+                    if (valArr.length < 4) {
+                        continue;
+                    }
 
-            BuyOverVO buyOverVO = new BuyOverVO();
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyy/MM/dd");
-            LocalDate adDate = LocalDate.parse(valArr[0].trim(), formatter).plusYears(1911);
+                    BuyOverVO buyOverVO = new BuyOverVO();
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyy/MM/dd");
+                    LocalDate adDate = LocalDate.parse(valArr[0].trim(), formatter).plusYears(1911);
 
-            buyOverVO.setDataDate(adDate);
-            buyOverVO.setInvTruQty(Long.parseLong(valArr[1].trim()));
-            buyOverVO.setDealerQty(Long.parseLong(valArr[2].trim()));
-            buyOverVO.setForeignQty(Long.parseLong(valArr[3].trim()));
-            buyOverHistoryData.add(buyOverVO);
+                    buyOverVO.setDataDate(adDate);
+                    buyOverVO.setInvTruQty(Long.parseLong(valArr[1].trim()));
+                    buyOverVO.setDealerQty(Long.parseLong(valArr[2].trim()));
+                    buyOverVO.setForeignQty(Long.parseLong(valArr[3].trim()));
+                    buyOverHistoryData.add(buyOverVO);
+                } catch (NumberFormatException | DateTimeParseException ne) {
+                    ne.printStackTrace();
+                }
+            }
         }
         return buyOverHistoryData;
     }
 
     //比較2個bigDecimal
     private static BigDecimal countIncRate(BigDecimal baseNum, BigDecimal IncreaseNum) {
+        if (baseNum == null || IncreaseNum == null || baseNum.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
         BigDecimal twoNumDiff = IncreaseNum.subtract(baseNum);
-        BigDecimal increasePercent = twoNumDiff.multiply(new BigDecimal(100).divide(baseNum, 2, RoundingMode.HALF_UP));
-        return increasePercent;
+        return twoNumDiff.multiply(BigDecimal.valueOf(100)).divide(baseNum, 2, RoundingMode.HALF_UP);
     }
 
 }
