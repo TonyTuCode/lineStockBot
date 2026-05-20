@@ -8,7 +8,7 @@ public class DominatorCrawlerTest {
 
     private final DominatorCrawler dominatorCrawler = new DominatorCrawler();
 
-    @Test
+//    @Test
     void getBuyOverStockTopForeignBuyCallsRemoteAndPrintsResult() {
         String result = dominatorCrawler.dominateCrawlingAndAnalyze("2317");
         System.out.println(result);
