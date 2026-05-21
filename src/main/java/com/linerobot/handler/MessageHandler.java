@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.TreeMap;
 
+import com.linerobot.crawler.BuyOverAnalyzeCrawler;
 import com.linerobot.crawler.BuySellCrawler;
 import com.linerobot.crawler.DominatorCrawler;
 import com.linerobot.crawler.StrongCrawler;
@@ -31,12 +32,16 @@ public class MessageHandler {
 
     private DominatorCrawler dominatorCrawler;
 
+    private BuyOverAnalyzeCrawler buyOverAnalyzeCrawler;
+
     private MenuCode menuCode;
 
-    public MessageHandler (BuySellCrawler buySellCrawler, StrongCrawler strongCrawler,DominatorCrawler dominatorCrawler, MenuCode menuCode){
+    public MessageHandler (BuySellCrawler buySellCrawler, StrongCrawler strongCrawler, DominatorCrawler dominatorCrawler,
+                           BuyOverAnalyzeCrawler buyOverAnalyzeCrawler, MenuCode menuCode){
         this.buySellCrawler = buySellCrawler;
         this.strongCrawler = strongCrawler;
         this.dominatorCrawler = dominatorCrawler;
+        this.buyOverAnalyzeCrawler = buyOverAnalyzeCrawler;
         this.menuCode = menuCode;
     }
 
@@ -76,6 +81,9 @@ public class MessageHandler {
                 break;
             case MenuCode.FOREIGN_INV_TOGETHER_BUY:
                 sendLinePlatform(text(token, buySellCrawler.getBuyOverStockTop(3)));
+                break;
+            case MenuCode.BUY_OVER_ANALYZE:
+                sendLinePlatform(text(token, buyOverAnalyzeCrawler.getBuyOverAnalyzeResult()));
                 break;
             case MenuCode.DOMINATOR:
                 String stockNum = evenText.substring(4, evenText.length());
@@ -119,6 +127,9 @@ public class MessageHandler {
         }
         if (eventText.equals("togetherbuy")){
             return MenuCode.FOREIGN_INV_TOGETHER_BUY;
+        }
+        if (eventText.equals("buyoveranalyze")){
+            return MenuCode.BUY_OVER_ANALYZE;
         }
         if (eventText.matches("ctrl{1}[a-zA-Z0-9]*")){
             return MenuCode.DOMINATOR;
@@ -170,6 +181,7 @@ public class MessageHandler {
         commandAndWord.put("foreignbuy","外資3日買超");
         commandAndWord.put("invtrubuy","投信3日買超");
         commandAndWord.put("togetherbuy", "土洋合攻3日買超");
+        commandAndWord.put("buyoveranalyze", "買超綜合分析");
         return this.menuConvertor("買超指令表",commandAndWord,replyToken);
     }
 

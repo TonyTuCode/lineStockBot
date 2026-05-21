@@ -35,6 +35,9 @@ public class MenuCode {
     /** 認養股分析*/
     public static final int DOMINATOR = 7;
 
+    /** 買超綜合主力分析 */
+    public static final int BUY_OVER_ANALYZE = 8;
+
     public String getMenu (){
         StringBuilder menu = new StringBuilder();
         menu.append("指令表(不分大小寫)");
@@ -47,6 +50,7 @@ public class MenuCode {
         menu.append("\nforeignbuy: 外資3日買超");
         menu.append("\ninvtrubuy: 投信3日買超");
         menu.append("\ntogetherbuy: 土洋合攻3日買超");
+        menu.append("\nbuyoveranalyze: 買超綜合主力分析");
         menu.append("\nctrl+股號: 認養股分析");
         return menu.toString();
     }

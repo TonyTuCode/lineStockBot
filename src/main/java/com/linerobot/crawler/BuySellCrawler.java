@@ -13,7 +13,6 @@ import com.linerobot.vo.StockVO;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import static java.time.format.DateTimeFormatter.BASIC_ISO_DATE;
@@ -96,7 +95,7 @@ public class BuySellCrawler {
 	//格式化買超輸出
 	private String formatBuyOverStock(StockVO stockVO, String buyOverSource) {
 		return stockVO.getStockID() + " " + stockVO.getStockName()
-				+ " " + buyOverSource + ":" + getBuyOverQty(stockVO) + "張\n";
+				+ " " + buyOverSource + ": " + getBuyOverQty(stockVO) + "張\n";
 	}
 
 	private void appendBuyOverStockList(StringBuffer returnMessage, List<StockVO> stockList, String buyOverSource) {
@@ -120,9 +119,9 @@ public class BuySellCrawler {
 			returnMessage.append(foreignStock.getStockID())
 					.append(" ")
 					.append(foreignStock.getStockName())
-					.append(" 外:")
+					.append(" 外: ")
 					.append(getBuyOverQty(foreignStock))
-					.append("張 投:")
+					.append("張 投: ")
 					.append(getBuyOverQty(invTruStock))
 					.append("張\n");
 		}
@@ -130,18 +129,6 @@ public class BuySellCrawler {
 
 	private Long getBuyOverQty(StockVO stockVO) {
 		return stockVO.getBuyOverQty() == null ? 0L : stockVO.getBuyOverQty();
-	}
-
-	@Scheduled(cron = "0 30 17 * * *", zone = CACHE_ZONE)
-	public void refreshBuyOverCacheBySchedule() {
-		try {
-			refreshBuyOverCache();
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 
 	public void refreshBuyOverCache() throws IOException, InterruptedException {
@@ -155,6 +142,14 @@ public class BuySellCrawler {
 			foreignBuyOverCacheCreatedAt = createdAt;
 			invTruBuyOverCacheCreatedAt = createdAt;
 		}
+	}
+
+	public List<StockVO> getForeignBuyOverStocks() throws IOException, InterruptedException {
+		return getForeignBuyOver();
+	}
+
+	public List<StockVO> getInvTruBuyOverStocks() throws IOException, InterruptedException {
+		return getInvTruBuyOver();
 	}
 
 	private List<StockVO> getForeignBuyOver() throws IOException, InterruptedException {

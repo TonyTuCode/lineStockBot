@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -44,6 +45,10 @@ public class DominatorCrawler {
     private static String INCREASE_PATH = "./stockFiles/%Sincrease.csv";
 
     private static String BUYOVER_PATH = "./stockFiles/%SBuyover.csv";
+
+    private static String ANALYZE_RESULT_PATH = "./stockFiles/%SAnalyzeResult.txt";
+
+    private static final long DOWNLOAD_REQUEST_INTERVAL_MS = 500L;
 
     private static final String FINMIND_STOCK_PRICE_URL =
             "https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=%s&start_date=%s&end_date=%s";
@@ -85,15 +90,26 @@ public class DominatorCrawler {
                     this.downloadIncreaseFile(stockNum ,PERIOD_MONTH);
                 }
                 if (needDownloadBuyOver) {
+                    Thread.currentThread().sleep(DOWNLOAD_REQUEST_INTERVAL_MS);
                     Files.deleteIfExists(buyoverFile);
                     this.downloadBuyOverFile(stockNum ,PERIOD_MONTH);
                 }
             } catch (IOException ioe){
                 ioe.printStackTrace();
+                try {
+                    this.deleteStockSourceFiles(stockNum);
+                } catch (IOException deleteException) {
+                    deleteException.printStackTrace();
+                }
                 return "來源網站無該股票資料。";
             } catch (InterruptedException ie){
                 ie.printStackTrace();
                 Thread.currentThread().interrupt();
+                try {
+                    this.deleteStockSourceFiles(stockNum);
+                } catch (IOException deleteException) {
+                    deleteException.printStackTrace();
+                }
                 return "主力分析資料下載中斷，請稍後再試。";
             }
         }
@@ -158,7 +174,44 @@ public class DominatorCrawler {
         finalAnalyzeResult.append(" 自營控盤次數:"+dealerCtrl);
         finalAnalyzeResult.append(" 外資控盤次數:"+foreignCtrl);
 
-        return finalAnalyzeResult.toString();
+        String analyzeResult = finalAnalyzeResult.toString();
+        boolean resultFileWritten = false;
+        try {
+            this.writeAnalyzeResultFile(stockNum, analyzeResult);
+            resultFileWritten = true;
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
+
+        if (resultFileWritten) {
+            try {
+                this.deleteStockSourceFiles(stockNum);
+            } catch (IOException ioe) {
+                ioe.printStackTrace();
+            }
+        }
+
+        return analyzeResult;
+    }
+
+    public String dominateCrawlingAndControlCount(String stockNum) {
+        String analyzeResult = this.dominateCrawlingAndAnalyze(stockNum);
+        String marker = "投信控盤次數:";
+        int markerIndex = analyzeResult.lastIndexOf(marker);
+        if (markerIndex < 0) {
+            throw new IllegalStateException("Dominator analyze failed: " + analyzeResult);
+        }
+        return analyzeResult.substring(markerIndex).trim();
+    }
+
+    private void writeAnalyzeResultFile(String stockNum, String analyzeResult) throws IOException {
+        Files.createDirectories(Paths.get(STOCK_FILE_DIR));
+        Files.write(Paths.get(String.format(ANALYZE_RESULT_PATH, stockNum)), analyzeResult.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private void deleteStockSourceFiles(String stockNum) throws IOException {
+        Files.deleteIfExists(Paths.get(String.format(INCREASE_PATH, stockNum)));
+        Files.deleteIfExists(Paths.get(String.format(BUYOVER_PATH, stockNum)));
     }
 
     //下載買超
@@ -404,7 +457,7 @@ public class DominatorCrawler {
             } catch (IOException e) {
                 lastException = e;
             }
-            Thread.currentThread().sleep(tryCount * 1500L);
+            Thread.currentThread().sleep(500L);
         }
         throw lastException;
     }
