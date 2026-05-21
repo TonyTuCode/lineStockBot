@@ -2,6 +2,8 @@ package com.linerobot.crawler;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -11,6 +13,7 @@ import com.linerobot.vo.StockVO;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import static java.time.format.DateTimeFormatter.BASIC_ISO_DATE;
@@ -32,6 +35,20 @@ public class BuySellCrawler {
 
 	private static final String INV_TRU_BUY_OVER = "https://www.twse.com.tw/rwd/zh/fund/TWT44U";
 
+	private static final String CACHE_ZONE = "Asia/Taipei";
+
+	private static final Duration BUY_OVER_CACHE_TTL = Duration.ofHours(23);
+
+	private final Object buyOverCacheLock = new Object();
+
+	private volatile List<StockVO> foreignBuyOverCache = Collections.emptyList();
+
+	private volatile List<StockVO> invTruBuyOverCache = Collections.emptyList();
+
+	private volatile Instant foreignBuyOverCacheCreatedAt;
+
+	private volatile Instant invTruBuyOverCacheCreatedAt;
+
 
 	/**
 	 * get 法人連續買超>3日
@@ -45,18 +62,18 @@ public class BuySellCrawler {
 		try {
 			switch (juridicalPerson) {
 				case 1:
-					comparedList = this.getBuyOverByURL(FOREIGN_BUY_OVER);
+					comparedList = this.getForeignBuyOver();
 					buyOverSource = "外";
 					returnMessage.append("外資3日連續買超股:\n");
 					break;
 				case 2:
-					comparedList = this.getBuyOverByURL(INV_TRU_BUY_OVER);
+					comparedList = this.getInvTruBuyOver();
 					buyOverSource = "投";
 					returnMessage.append("投信3日連續買超股:\n");
 					break;
 				case 3:
-					List<StockVO> foreignList = this.getBuyOverByURL(FOREIGN_BUY_OVER);
-					List<StockVO> invTruList = this.getBuyOverByURL(INV_TRU_BUY_OVER);
+					List<StockVO> foreignList = this.getForeignBuyOver();
+					List<StockVO> invTruList = this.getInvTruBuyOver();
 					returnMessage.append("外資3日連續買超股:\n");
 					appendBuyOverStockList(returnMessage, foreignList, "外");
 					returnMessage.append("\n投信3日連續買超股:\n");
@@ -103,9 +120,9 @@ public class BuySellCrawler {
 			returnMessage.append(foreignStock.getStockID())
 					.append(" ")
 					.append(foreignStock.getStockName())
-					.append(" 外: ")
+					.append(" 外:")
 					.append(getBuyOverQty(foreignStock))
-					.append("張 投: ")
+					.append("張 投:")
 					.append(getBuyOverQty(invTruStock))
 					.append("張\n");
 		}
@@ -113,6 +130,79 @@ public class BuySellCrawler {
 
 	private Long getBuyOverQty(StockVO stockVO) {
 		return stockVO.getBuyOverQty() == null ? 0L : stockVO.getBuyOverQty();
+	}
+
+	@Scheduled(cron = "0 30 17 * * *", zone = CACHE_ZONE)
+	public void refreshBuyOverCacheBySchedule() {
+		try {
+			refreshBuyOverCache();
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void refreshBuyOverCache() throws IOException, InterruptedException {
+		List<StockVO> foreignList = getBuyOverByURL(FOREIGN_BUY_OVER);
+		List<StockVO> invTruList = getBuyOverByURL(INV_TRU_BUY_OVER);
+
+		synchronized (buyOverCacheLock) {
+			Instant createdAt = Instant.now();
+			foreignBuyOverCache = toCacheList(foreignList);
+			invTruBuyOverCache = toCacheList(invTruList);
+			foreignBuyOverCacheCreatedAt = createdAt;
+			invTruBuyOverCacheCreatedAt = createdAt;
+		}
+	}
+
+	private List<StockVO> getForeignBuyOver() throws IOException, InterruptedException {
+		List<StockVO> cachedList = foreignBuyOverCache;
+		if (isCacheAvailable(cachedList, foreignBuyOverCacheCreatedAt)) {
+			return toReturnList(cachedList);
+		}
+
+		List<StockVO> crawledList = getBuyOverByURL(FOREIGN_BUY_OVER);
+		synchronized (buyOverCacheLock) {
+			foreignBuyOverCache = toCacheList(crawledList);
+			foreignBuyOverCacheCreatedAt = Instant.now();
+		}
+		return toReturnList(crawledList);
+	}
+
+	private List<StockVO> getInvTruBuyOver() throws IOException, InterruptedException {
+		List<StockVO> cachedList = invTruBuyOverCache;
+		if (isCacheAvailable(cachedList, invTruBuyOverCacheCreatedAt)) {
+			return toReturnList(cachedList);
+		}
+
+		List<StockVO> crawledList = getBuyOverByURL(INV_TRU_BUY_OVER);
+		synchronized (buyOverCacheLock) {
+			invTruBuyOverCache = toCacheList(crawledList);
+			invTruBuyOverCacheCreatedAt = Instant.now();
+		}
+		return toReturnList(crawledList);
+	}
+
+	private boolean isCacheAvailable(List<StockVO> stockList, Instant createdAt) {
+		return !CollectionUtils.isEmpty(stockList)
+				&& createdAt != null
+				&& createdAt.plus(BUY_OVER_CACHE_TTL).isAfter(Instant.now());
+	}
+
+	private List<StockVO> toCacheList(List<StockVO> stockList) {
+		if (stockList == null) {
+			return Collections.emptyList();
+		}
+		return Collections.unmodifiableList(new ArrayList<>(stockList));
+	}
+
+	private List<StockVO> toReturnList(List<StockVO> stockList) {
+		if (stockList == null) {
+			return new ArrayList<>();
+		}
+		return new ArrayList<>(stockList);
 	}
 
 	//將拿到買超集合方法獨立
