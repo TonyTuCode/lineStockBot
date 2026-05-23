@@ -48,16 +48,20 @@ public class BuyOverAnalyzeCrawler {
     }
 
     public String getBuyOverAnalyzeResult() {
-        Path resultPath = Paths.get(BUY_OVER_ANALYZE_RESULT_PATH);
-        if (Files.notExists(resultPath)) {
-            return "買超綜合分析尚未產生，將於每日17:30自動更新。";
-        }
-
         try {
-            return new String(Files.readAllBytes(resultPath), StandardCharsets.UTF_8);
+            String cachedResult = readBuyOverAnalyzeResult();
+            if (cachedResult != null) {
+                return cachedResult;
+            }
+            System.out.println("買超綜合分析快取不存在，立即重新產生一次。");
+            return refreshBuyOverAnalyze();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            e.printStackTrace();
+            return "買超綜合分析更新中斷，請稍後再試。";
         } catch (IOException e) {
             e.printStackTrace();
-            return "買超綜合分析讀取失敗，請稍後再試。";
+            return "買超綜合分析尚未產生，且即時更新失敗，請稍後再試。";
         }
     }
 
@@ -111,5 +115,18 @@ public class BuyOverAnalyzeCrawler {
     private void writeAnalyzeResult(String analyzeResult) throws IOException {
         Files.createDirectories(Paths.get(STOCK_FILE_DIR));
         Files.write(Paths.get(BUY_OVER_ANALYZE_RESULT_PATH), analyzeResult.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private String readBuyOverAnalyzeResult() throws IOException {
+        Path resultPath = Paths.get(BUY_OVER_ANALYZE_RESULT_PATH);
+        if (!Files.isRegularFile(resultPath)) {
+            return null;
+        }
+
+        String cachedResult = new String(Files.readAllBytes(resultPath), StandardCharsets.UTF_8);
+        if (cachedResult.trim().isEmpty()) {
+            return null;
+        }
+        return cachedResult;
     }
 }

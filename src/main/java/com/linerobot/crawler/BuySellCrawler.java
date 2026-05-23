@@ -181,7 +181,7 @@ public class BuySellCrawler {
 	}
 
 	private boolean isCacheAvailable(List<StockVO> stockList, Instant createdAt) {
-		return !CollectionUtils.isEmpty(stockList)
+		return stockList != null
 				&& createdAt != null
 				&& createdAt.plus(BUY_OVER_CACHE_TTL).isAfter(Instant.now());
 	}
