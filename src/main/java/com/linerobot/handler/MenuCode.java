@@ -14,6 +14,9 @@ public class MenuCode {
     /** 買超菜單 */
     public static final int BUY_OVER_MENU = 997;
 
+    /** 賣超菜單 */
+    public static final int SELL_OVER_MENU = 996;
+
     /** 籌碼日報 */
     public static final int DAILY_REPORT = 1;
 
@@ -38,6 +41,15 @@ public class MenuCode {
     /** 買超綜合主力分析 */
     public static final int BUY_OVER_ANALYZE = 8;
 
+    /** 外資賣超*/
+    public static final int FOREIGN_SELL = 9;
+
+    /** 投信賣超*/
+    public static final int INV_TRU_SELL = 10;
+
+    /** 土洋合殺賣超*/
+    public static final int FOREIGN_INV_TOGETHER_SELL = 11;
+
     public String getMenu (){
         StringBuilder menu = new StringBuilder();
         menu.append("指令表(不分大小寫)");
@@ -51,6 +63,9 @@ public class MenuCode {
         menu.append("\ninvtrubuy: 投信3日買超");
         menu.append("\ntogetherbuy: 土洋合攻3日買超");
         menu.append("\nbuyoveranalyze: 買超綜合主力分析");
+        menu.append("\nforeignsell: 外資3日賣超");
+        menu.append("\ninvtrusell: 投信3日賣超");
+        menu.append("\ntogethersell: 土洋合殺3日賣超");
         menu.append("\nctrl+股號: 認養股分析");
         return menu.toString();
     }

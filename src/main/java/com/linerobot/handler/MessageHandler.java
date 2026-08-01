@@ -85,6 +85,18 @@ public class MessageHandler {
             case MenuCode.BUY_OVER_ANALYZE:
                 sendLinePlatform(text(token, buyOverAnalyzeCrawler.getBuyOverAnalyzeResult()));
                 break;
+            case MenuCode.SELL_OVER_MENU:
+                sendLinePlatform(textSellMenu(token));
+                break;
+            case MenuCode.FOREIGN_SELL:
+                sendLinePlatform(text(token, buySellCrawler.getSellOverStockTop(1)));
+                break;
+            case MenuCode.INV_TRU_SELL:
+                sendLinePlatform(text(token, buySellCrawler.getSellOverStockTop(2)));
+                break;
+            case MenuCode.FOREIGN_INV_TOGETHER_SELL:
+                sendLinePlatform(text(token, buySellCrawler.getSellOverStockTop(3)));
+                break;
             case MenuCode.DOMINATOR:
                 String stockNum = evenText.substring(4, evenText.length());
                 String analyzeResult = "";
@@ -130,6 +142,18 @@ public class MessageHandler {
         }
         if (eventText.equals("buyoveranalyze")){
             return MenuCode.BUY_OVER_ANALYZE;
+        }
+        if (eventText.equals("sellmenu")){
+            return MenuCode.SELL_OVER_MENU;
+        }
+        if (eventText.equals("foreignsell")){
+            return MenuCode.FOREIGN_SELL;
+        }
+        if (eventText.equals("invtrusell")){
+            return MenuCode.INV_TRU_SELL;
+        }
+        if (eventText.equals("togethersell")){
+            return MenuCode.FOREIGN_INV_TOGETHER_SELL;
         }
         if (eventText.matches("ctrl{1}[a-zA-Z0-9]*")){
             return MenuCode.DOMINATOR;
@@ -183,6 +207,19 @@ public class MessageHandler {
         commandAndWord.put("togetherbuy", "土洋合攻3日買超");
         commandAndWord.put("buyoveranalyze", "買超綜合分析");
         return this.menuConvertor("買超指令表",commandAndWord,replyToken);
+    }
+
+    /**
+     * 回傳賣超菜單
+     * @param replyToken
+     * @return JSONObject
+     */
+    private JSONObject textSellMenu(String replyToken){
+        Map commandAndWord = new TreeMap();
+        commandAndWord.put("foreignsell","外資3日賣超");
+        commandAndWord.put("invtrusell","投信3日賣超");
+        commandAndWord.put("togethersell", "土洋合殺3日賣超");
+        return this.menuConvertor("賣超指令表",commandAndWord,replyToken);
     }
 
 

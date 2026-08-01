@@ -48,6 +48,14 @@ public class BuySellCrawler {
 
 	private volatile Instant invTruBuyOverCacheCreatedAt;
 
+	private volatile List<StockVO> foreignSellOverCache = Collections.emptyList();
+
+	private volatile List<StockVO> invTruSellOverCache = Collections.emptyList();
+
+	private volatile Instant foreignSellOverCacheCreatedAt;
+
+	private volatile Instant invTruSellOverCacheCreatedAt;
+
 
 	/**
 	 * get 法人連續買超>3日
@@ -237,15 +245,189 @@ public class BuySellCrawler {
 			minusDay++;
 		}
 
-		//比較集合重複
+		//先求出每一天都有買超（連續買超）的交集
 		List<StockVO> comparedList = new ArrayList<>();
 		for (int i = 0; i < collectStockList.size(); i++) {
 			if (CollectionUtils.isEmpty(comparedList)){
-				comparedList = collectStockList.get(i);
+				comparedList = new ArrayList<>(collectStockList.get(i));
 			} else {
 				comparedList.retainAll(collectStockList.get(i));
 			}
 		}
+
+		//將各天同一檔股票的買超張數加總
+		Map<String, Long> totalQtyMap = new HashMap<>();
+		for (List<StockVO> dailyList : collectStockList.values()) {
+			for (StockVO dailyStock : dailyList) {
+				long qty = dailyStock.getBuyOverQty() == null ? 0L : dailyStock.getBuyOverQty();
+				totalQtyMap.merge(dailyStock.getStockID(), qty, Long::sum);
+			}
+		}
+		for (StockVO stockVO : comparedList) {
+			stockVO.setBuyOverQty(totalQtyMap.getOrDefault(stockVO.getStockID(), 0L));
+		}
+
+		//依加總張數由大到小排序
+		comparedList.sort(Comparator.comparingLong(
+				(StockVO stockVO) -> stockVO.getBuyOverQty() == null ? 0L : stockVO.getBuyOverQty()).reversed());
+
+		return comparedList;
+	}
+
+
+	/**
+	 * get 法人連續賣超>3日
+	 * @Param juridicalPerson 1:外資 2:投信 3:土洋合殺
+	 * @return returnMessage
+	 */
+	public String getSellOverStockTop(int juridicalPerson) {
+		StringBuffer returnMessage = new StringBuffer();
+		List<StockVO> comparedList = new ArrayList<>();
+		String sellOverSource = "";
+		try {
+			switch (juridicalPerson) {
+				case 1:
+					comparedList = this.getForeignSellOver();
+					sellOverSource = "外";
+					returnMessage.append("外資3日連續賣超股:\n");
+					break;
+				case 2:
+					comparedList = this.getInvTruSellOver();
+					sellOverSource = "投";
+					returnMessage.append("投信3日連續賣超股:\n");
+					break;
+				case 3:
+					List<StockVO> foreignList = this.getForeignSellOver();
+					List<StockVO> invTruList = this.getInvTruSellOver();
+					returnMessage.append("外資3日連續賣超股:\n");
+					appendBuyOverStockList(returnMessage, foreignList, "外");
+					returnMessage.append("\n投信3日連續賣超股:\n");
+					appendBuyOverStockList(returnMessage, invTruList, "投");
+					returnMessage.append("\n");
+					returnMessage.append("土洋合殺3日連續賣超股:\n");
+					appendTogetherBuyOverStock(returnMessage, foreignList, invTruList);
+					return returnMessage.toString();
+			}
+
+			//將結果印出
+			appendBuyOverStockList(returnMessage, comparedList, sellOverSource);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return returnMessage.toString();
+	}
+
+	public void refreshSellOverCache() throws IOException, InterruptedException {
+		List<StockVO> foreignList = getSellOverByURL(FOREIGN_BUY_OVER);
+		List<StockVO> invTruList = getSellOverByURL(INV_TRU_BUY_OVER);
+
+		synchronized (buyOverCacheLock) {
+			Instant createdAt = Instant.now();
+			foreignSellOverCache = toCacheList(foreignList);
+			invTruSellOverCache = toCacheList(invTruList);
+			foreignSellOverCacheCreatedAt = createdAt;
+			invTruSellOverCacheCreatedAt = createdAt;
+		}
+	}
+
+	public List<StockVO> getForeignSellOverStocks() throws IOException, InterruptedException {
+		return getForeignSellOver();
+	}
+
+	public List<StockVO> getInvTruSellOverStocks() throws IOException, InterruptedException {
+		return getInvTruSellOver();
+	}
+
+	private List<StockVO> getForeignSellOver() throws IOException, InterruptedException {
+		List<StockVO> cachedList = foreignSellOverCache;
+		if (isCacheAvailable(cachedList, foreignSellOverCacheCreatedAt)) {
+			return toReturnList(cachedList);
+		}
+
+		List<StockVO> crawledList = getSellOverByURL(FOREIGN_BUY_OVER);
+		synchronized (buyOverCacheLock) {
+			foreignSellOverCache = toCacheList(crawledList);
+			foreignSellOverCacheCreatedAt = Instant.now();
+		}
+		return toReturnList(crawledList);
+	}
+
+	private List<StockVO> getInvTruSellOver() throws IOException, InterruptedException {
+		List<StockVO> cachedList = invTruSellOverCache;
+		if (isCacheAvailable(cachedList, invTruSellOverCacheCreatedAt)) {
+			return toReturnList(cachedList);
+		}
+
+		List<StockVO> crawledList = getSellOverByURL(INV_TRU_BUY_OVER);
+		synchronized (buyOverCacheLock) {
+			invTruSellOverCache = toCacheList(crawledList);
+			invTruSellOverCacheCreatedAt = Instant.now();
+		}
+		return toReturnList(crawledList);
+	}
+
+	//將拿到賣超集合方法獨立
+	private List<StockVO> getSellOverByURL(String restURL) throws IOException, InterruptedException {
+		Map<Integer,List<StockVO>> collectStockList = new TreeMap<>();
+		Map<String, String> map = new HashMap();
+		int collectDataDays = 0;
+		int minusDay = 0;
+		// 當天+往回抓2天賣超股票 TODO 之後改為變數形式
+		while (collectDataDays <= 3){
+			String dayBack =LocalDate.now().minusDays(minusDay).format(BASIC_ISO_DATE);
+			map.put("date", dayBack);
+			String response = requestSender.postRequester(restURL, map);
+			JSONObject originData = new JSONObject(response);
+			//用response裡的"stat":"OK" 分辨是否有拿到資料
+			if (("OK").equals(originData.getString("stat"))){
+				JSONArray sortedData = originData.getJSONArray("data");
+				//證交所資料排序不保證賣超集中於尾端(結尾多為買賣超0之個股)，故掃描全部個股，以最後一欄淨買賣超判斷
+				List<StockVO> stockListByDay = new ArrayList<>();
+				for (int i = 0 ; i < sortedData.length(); i++){
+					StockVO vo = new StockVO();
+					String[] eachStockBlock = convertor.getArrayByIdx(originData.getJSONArray("data"),i);
+					vo.setStockID(eachStockBlock[1].trim());
+					vo.setStockName(eachStockBlock[2].trim());
+					Long netQty = Long.valueOf(eachStockBlock[eachStockBlock.length - 1].replace(",", ""));
+					//<0時才為賣超，保留負值(賣超張數以負數表示)
+					if (netQty < 0){
+						vo.setBuyOverQty(netQty/1000);
+						stockListByDay.add(vo);
+					}
+				}
+				collectStockList.put(collectDataDays,stockListByDay);
+				collectDataDays++;
+			}
+			Thread.currentThread().sleep(500); //避免請求過於頻繁
+			minusDay++;
+		}
+
+		//先求出每一天都有賣超（連續賣超）的交集
+		List<StockVO> comparedList = new ArrayList<>();
+		for (int i = 0; i < collectStockList.size(); i++) {
+			if (CollectionUtils.isEmpty(comparedList)){
+				comparedList = new ArrayList<>(collectStockList.get(i));
+			} else {
+				comparedList.retainAll(collectStockList.get(i));
+			}
+		}
+
+		//將各天同一檔股票的賣超張數加總
+		Map<String, Long> totalQtyMap = new HashMap<>();
+		for (List<StockVO> dailyList : collectStockList.values()) {
+			for (StockVO dailyStock : dailyList) {
+				long qty = dailyStock.getBuyOverQty() == null ? 0L : dailyStock.getBuyOverQty();
+				totalQtyMap.merge(dailyStock.getStockID(), qty, Long::sum);
+			}
+		}
+		for (StockVO stockVO : comparedList) {
+			stockVO.setBuyOverQty(totalQtyMap.getOrDefault(stockVO.getStockID(), 0L));
+		}
+
+		//賣超為負值，由小到大排序(負的越多排越前面)
+		comparedList.sort(Comparator.comparingLong(
+				stockVO -> stockVO.getBuyOverQty() == null ? 0L : stockVO.getBuyOverQty()));
 
 		return comparedList;
 	}

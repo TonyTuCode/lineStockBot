@@ -34,6 +34,30 @@ class BuySellCrawlerTest {
         assertThat(result).isNotBlank();
     }
 
+//    @Test
+    void getSellOverStockTopForeignSellCallsRemoteAndPrintsResult() {
+        String result = buySellCrawler.getSellOverStockTop(1);
+
+        printResult("case 1: foreign sell", result);
+        assertThat(result).isNotBlank();
+    }
+
+//    @Test
+    void getSellOverStockTopInvestmentTrustSellCallsRemoteAndPrintsResult() {
+        String result = buySellCrawler.getSellOverStockTop(2);
+
+        printResult("case 2: investment trust sell", result);
+        assertThat(result).isNotBlank();
+    }
+
+//    @Test
+    void getSellOverStockTopForeignAndInvestmentTrustSellCallsRemoteAndPrintsResult() {
+        String result = buySellCrawler.getSellOverStockTop(3);
+
+        printResult("case 3: foreign and investment trust sell", result);
+        assertThat(result).isNotBlank();
+    }
+
     private void printResult(String title, String result) {
         System.out.println("============================================================");
         System.out.println(title);
