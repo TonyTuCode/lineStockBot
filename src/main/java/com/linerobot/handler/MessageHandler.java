@@ -1,8 +1,8 @@
 package com.linerobot.handler;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.TreeMap;
 
 import com.linerobot.crawler.BuyOverAnalyzeCrawler;
 import com.linerobot.crawler.BuySellCrawler;
@@ -182,68 +182,151 @@ public class MessageHandler {
         return body;
     }
 
+    /** 常用功能主題色(藍) */
+    private static final String COLOR_COMMON = "#3B82F6";
+
+    /** 買超主題色(紅,漲) */
+    private static final String COLOR_BUY = "#E03131";
+
+    /** 賣超主題色(綠,跌) */
+    private static final String COLOR_SELL = "#2F9E44";
+
     /**
-     * 回傳新版菜單 TODO 待整合
+     * 新版整合選單：以 LINE Flex Message 的 carousel 一次呈現常用/買超/賣超，
+     * 取代原本 buttons template 的巢狀選單。
      * @param replyToken
      * @return JSONObject
      */
-    private  JSONObject textNewMenu(String replyToken){
-        Map commandAndWord = new TreeMap();
-        commandAndWord.put("buymenu", "買超選單");
-        commandAndWord.put("day", "每日籌碼");
-        commandAndWord.put("strong3","3日勝大盤");
-        return this.menuConvertor("常用指令表",commandAndWord,replyToken);
+    private JSONObject textNewMenu(String replyToken){
+        Map<String, String> common = new LinkedHashMap<>();
+        common.put("day", "每日籌碼");
+        common.put("strong3", "3日勝大盤");
+        common.put("menu", "完整指令表");
+
+        JSONArray bubbles = new JSONArray();
+        bubbles.put(buildMenuBubble("常用功能", COLOR_COMMON, common));
+        bubbles.put(buildMenuBubble("三日買超", COLOR_BUY, buyMenuItems()));
+        bubbles.put(buildMenuBubble("三日賣超", COLOR_SELL, sellMenuItems()));
+
+        return flexMenuMessage("功能選單", replyToken, bubbles);
     }
 
     /**
-     * 回傳買超菜單
+     * 回傳買超選單(單張 Flex bubble)
      * @param replyToken
      * @return JSONObject
      */
     private JSONObject textBuyMenu(String replyToken){
-        Map commandAndWord = new TreeMap();
-        commandAndWord.put("foreignbuy","外資3日買超");
-        commandAndWord.put("invtrubuy","投信3日買超");
-        commandAndWord.put("togetherbuy", "土洋合攻3日買超");
-        commandAndWord.put("buyoveranalyze", "買超綜合分析");
-        return this.menuConvertor("買超指令表",commandAndWord,replyToken);
+        JSONArray bubbles = new JSONArray();
+        bubbles.put(buildMenuBubble("三日買超", COLOR_BUY, buyMenuItems()));
+        return flexMenuMessage("買超選單", replyToken, bubbles);
     }
 
     /**
-     * 回傳賣超菜單
+     * 回傳賣超選單(單張 Flex bubble)
      * @param replyToken
      * @return JSONObject
      */
     private JSONObject textSellMenu(String replyToken){
-        Map commandAndWord = new TreeMap();
-        commandAndWord.put("foreignsell","外資3日賣超");
-        commandAndWord.put("invtrusell","投信3日賣超");
-        commandAndWord.put("togethersell", "土洋合殺3日賣超");
-        return this.menuConvertor("賣超指令表",commandAndWord,replyToken);
+        JSONArray bubbles = new JSONArray();
+        bubbles.put(buildMenuBubble("三日賣超", COLOR_SELL, sellMenuItems()));
+        return flexMenuMessage("賣超選單", replyToken, bubbles);
     }
 
+    private Map<String, String> buyMenuItems(){
+        Map<String, String> items = new LinkedHashMap<>();
+        items.put("foreignbuy", "外資3日買超");
+        items.put("invtrubuy", "投信3日買超");
+        items.put("togetherbuy", "土洋合攻3日買超");
+        items.put("buyoveranalyze", "買超綜合分析");
+        return items;
+    }
 
-    private JSONObject menuConvertor (String title, Map<String,String> commandAndWord, String replyToken) {
-        JSONObject body = new JSONObject();
-        JSONArray messages = new JSONArray();
-        JSONObject message = new JSONObject();
-        JSONObject template = new JSONObject();
-        JSONArray actions = new JSONArray();
-        commandAndWord.forEach( (command,word) -> {
-            actions.put(new JSONObject().put("type", "message").put("text", command).put("label", word));
+    private Map<String, String> sellMenuItems(){
+        Map<String, String> items = new LinkedHashMap<>();
+        items.put("foreignsell", "外資3日賣超");
+        items.put("invtrusell", "投信3日賣超");
+        items.put("togethersell", "土洋合殺3日賣超");
+        return items;
+    }
+
+    /**
+     * 建立單一分類的 Flex bubble：標題列 + 一組指令按鈕。
+     * 每個按鈕為 message action，點擊後送出對應指令字串。
+     * @param title 分類標題
+     * @param themeColor 主題色(hex)
+     * @param commandAndWord key=送出的指令, value=按鈕顯示文字(<=20字)
+     * @return bubble 的 JSONObject
+     */
+    private JSONObject buildMenuBubble(String title, String themeColor, Map<String, String> commandAndWord){
+        JSONArray buttonContents = new JSONArray();
+        commandAndWord.forEach((command, word) -> {
+            JSONObject action = new JSONObject()
+                    .put("type", "message")
+                    .put("label", word)
+                    .put("text", command);
+            JSONObject button = new JSONObject()
+                    .put("type", "button")
+                    .put("style", "primary")
+                    .put("color", themeColor)
+                    .put("height", "sm")
+                    .put("margin", "sm")
+                    .put("action", action);
+            buttonContents.put(button);
         });
 
-        template.put("text", title);
-        template.put("type", "buttons");
-        template.put("actions", actions);
-        message.put("template", template);
-        message.put("altText", title);
-        message.put("type", "template");
-        //放入回傳訊息
-        messages.put(message);
-        //放入reply token
+        JSONObject titleText = new JSONObject()
+                .put("type", "text")
+                .put("text", title)
+                .put("weight", "bold")
+                .put("size", "lg")
+                .put("color", "#FFFFFF");
+        JSONObject header = new JSONObject()
+                .put("type", "box")
+                .put("layout", "vertical")
+                .put("backgroundColor", themeColor)
+                .put("paddingAll", "12px")
+                .put("contents", new JSONArray().put(titleText));
+
+        JSONObject bodyBox = new JSONObject()
+                .put("type", "box")
+                .put("layout", "vertical")
+                .put("spacing", "sm")
+                .put("paddingAll", "12px")
+                .put("contents", buttonContents);
+
+        return new JSONObject()
+                .put("type", "bubble")
+                .put("size", "kilo")
+                .put("header", header)
+                .put("body", bodyBox);
+    }
+
+    /**
+     * 將 bubble 陣列包成 Flex Message：單張時直接用 bubble，多張時用 carousel。
+     * @param altText 替代文字(<=400字，通知列/不支援裝置顯示)
+     * @param replyToken
+     * @param bubbles bubble 陣列(carousel 上限 12 張)
+     * @return 可直接送出的 reply body
+     */
+    private JSONObject flexMenuMessage(String altText, String replyToken, JSONArray bubbles){
+        JSONObject contents;
+        if (bubbles.length() == 1) {
+            contents = bubbles.getJSONObject(0);
+        } else {
+            contents = new JSONObject()
+                    .put("type", "carousel")
+                    .put("contents", bubbles);
+        }
+
+        JSONObject message = new JSONObject()
+                .put("type", "flex")
+                .put("altText", altText)
+                .put("contents", contents);
+
+        JSONObject body = new JSONObject();
         body.put("replyToken", replyToken);
-        body.put("messages", messages);
+        body.put("messages", new JSONArray().put(message));
         return body;
     }
 
