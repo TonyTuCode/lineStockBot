@@ -50,6 +50,9 @@ public class MenuCode {
     /** 土洋合殺賣超*/
     public static final int FOREIGN_INV_TOGETHER_SELL = 11;
 
+    /** 處置股分析 */
+    public static final int DISPOSITION_ANALYZE = 12;
+
     public String getMenu (){
         StringBuilder menu = new StringBuilder();
         menu.append("指令表(不分大小寫)");
@@ -66,6 +69,7 @@ public class MenuCode {
         menu.append("\nforeignsell: 外資3日賣超");
         menu.append("\ninvtrusell: 投信3日賣超");
         menu.append("\ntogethersell: 土洋合殺3日賣超");
+        menu.append("\ndisposition: 處置股分析");
         menu.append("\nctrl+股號: 認養股分析");
         return menu.toString();
     }

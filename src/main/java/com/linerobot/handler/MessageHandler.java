@@ -6,6 +6,7 @@ import java.util.Map;
 
 import com.linerobot.crawler.BuyOverAnalyzeCrawler;
 import com.linerobot.crawler.BuySellCrawler;
+import com.linerobot.crawler.DispositionCrawler;
 import com.linerobot.crawler.DominatorCrawler;
 import com.linerobot.crawler.StrongCrawler;
 import org.json.JSONArray;
@@ -34,14 +35,17 @@ public class MessageHandler {
 
     private BuyOverAnalyzeCrawler buyOverAnalyzeCrawler;
 
+    private DispositionCrawler dispositionCrawler;
+
     private MenuCode menuCode;
 
     public MessageHandler (BuySellCrawler buySellCrawler, StrongCrawler strongCrawler, DominatorCrawler dominatorCrawler,
-                           BuyOverAnalyzeCrawler buyOverAnalyzeCrawler, MenuCode menuCode){
+                           BuyOverAnalyzeCrawler buyOverAnalyzeCrawler, DispositionCrawler dispositionCrawler, MenuCode menuCode){
         this.buySellCrawler = buySellCrawler;
         this.strongCrawler = strongCrawler;
         this.dominatorCrawler = dominatorCrawler;
         this.buyOverAnalyzeCrawler = buyOverAnalyzeCrawler;
+        this.dispositionCrawler = dispositionCrawler;
         this.menuCode = menuCode;
     }
 
@@ -96,6 +100,9 @@ public class MessageHandler {
                 break;
             case MenuCode.FOREIGN_INV_TOGETHER_SELL:
                 sendLinePlatform(text(token, buySellCrawler.getSellOverStockTop(3)));
+                break;
+            case MenuCode.DISPOSITION_ANALYZE:
+                sendLinePlatform(text(token, dispositionCrawler.getDispositionAnalysis()));
                 break;
             case MenuCode.DOMINATOR:
                 String stockNum = evenText.substring(4, evenText.length());
@@ -155,6 +162,9 @@ public class MessageHandler {
         if (eventText.equals("togethersell")){
             return MenuCode.FOREIGN_INV_TOGETHER_SELL;
         }
+        if (eventText.equals("disposition") || eventText.equals("處置股分析")){
+            return MenuCode.DISPOSITION_ANALYZE;
+        }
         if (eventText.matches("ctrl{1}[a-zA-Z0-9]*")){
             return MenuCode.DOMINATOR;
         }
@@ -201,6 +211,7 @@ public class MessageHandler {
         Map<String, String> common = new LinkedHashMap<>();
         common.put("day", "每日籌碼");
         common.put("strong3", "3日勝大盤");
+        common.put("disposition", "處置股分析");
         common.put("menu", "完整指令表");
 
         JSONArray bubbles = new JSONArray();

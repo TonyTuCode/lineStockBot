@@ -2,6 +2,7 @@ target/
 .mvn/
 .idea/
 stockFiles/
+scripts/output/
 release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
