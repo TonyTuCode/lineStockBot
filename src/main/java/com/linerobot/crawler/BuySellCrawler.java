@@ -37,6 +37,9 @@ public class BuySellCrawler {
 	private static final String CACHE_ZONE = "Asia/Taipei";
 
 	private static final Duration BUY_OVER_CACHE_TTL = Duration.ofHours(23);
+	private static final int BUY_OVER_DAYS = 3;
+	private static final int TOP_BUY_OVER_COUNT = 10;
+	private static final long TOGETHER_BUY_OVER_TOTAL_THRESHOLD = 100L;
 
 	private final Object buyOverCacheLock = new Object();
 
@@ -71,33 +74,39 @@ public class BuySellCrawler {
 				case 1:
 					comparedList = this.getForeignBuyOver();
 					buyOverSource = "外";
-					returnMessage.append("外資3日連續買超股:\n");
+					returnMessage.append("外資3日連續買超前10名:\n");
 					break;
 				case 2:
 					comparedList = this.getInvTruBuyOver();
 					buyOverSource = "投";
-					returnMessage.append("投信3日連續買超股:\n");
+					returnMessage.append("投信3日連續買超前10名:\n");
 					break;
 				case 3:
 					List<StockVO> foreignList = this.getForeignBuyOver();
 					List<StockVO> invTruList = this.getInvTruBuyOver();
-					returnMessage.append("外資3日連續買超股:\n");
-					appendBuyOverStockList(returnMessage, foreignList, "外");
-					returnMessage.append("\n投信3日連續買超股:\n");
-					appendBuyOverStockList(returnMessage, invTruList, "投");
+					returnMessage.append("外資3日連續買超前10名:\n");
+					appendTopBuyOverStockList(returnMessage, foreignList, "外");
+					returnMessage.append("\n投信3日連續買超前10名:\n");
+					appendTopBuyOverStockList(returnMessage, invTruList, "投");
 					returnMessage.append("\n");
-					returnMessage.append("土洋合攻3日連續買超股:\n");
+					returnMessage.append("土洋合攻3日連續買超前10名:\n");
 					appendTogetherBuyOverStock(returnMessage, foreignList, invTruList);
 					return returnMessage.toString();
 			}
 
-			//將結果印出
-			appendBuyOverStockList(returnMessage, comparedList, buyOverSource);
+			//將結果印出(只取前10名)
+			appendTopBuyOverStockList(returnMessage, comparedList, buyOverSource);
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return returnMessage.toString();
+	}
+
+	private void appendTopBuyOverStockList(StringBuffer returnMessage, List<StockVO> stockList, String buyOverSource) {
+		appendBuyOverStockList(returnMessage,
+				stockList.stream().limit(TOP_BUY_OVER_COUNT).collect(java.util.stream.Collectors.toList()),
+				buyOverSource);
 	}
 
 	//格式化買超輸出
@@ -113,6 +122,46 @@ public class BuySellCrawler {
 	}
 
 	private void appendTogetherBuyOverStock(StringBuffer returnMessage, List<StockVO> foreignList, List<StockVO> invTruList) {
+		Map<String, StockVO> invTruMap = new HashMap<>();
+		for (StockVO stockVO : invTruList) {
+			invTruMap.put(stockVO.getStockID(), stockVO);
+		}
+
+		List<StockVO> togetherList = new ArrayList<>();
+		for (StockVO foreignStock : foreignList) {
+			StockVO invTruStock = invTruMap.get(foreignStock.getStockID());
+			if (invTruStock == null
+					|| getBuyOverQty(foreignStock) <= TOGETHER_BUY_OVER_TOTAL_THRESHOLD
+					|| getBuyOverQty(invTruStock) <= TOGETHER_BUY_OVER_TOTAL_THRESHOLD) {
+				continue;
+			}
+
+			StockVO togetherStock = new StockVO();
+			togetherStock.setStockID(foreignStock.getStockID());
+			togetherStock.setStockName(foreignStock.getStockName());
+			togetherStock.setBuyOverQty(getBuyOverQty(foreignStock) + getBuyOverQty(invTruStock));
+			togetherList.add(togetherStock);
+		}
+
+		togetherList.sort(Comparator.comparingLong(this::getBuyOverQty).reversed());
+		for (StockVO stockVO : togetherList.stream().limit(TOP_BUY_OVER_COUNT).collect(java.util.stream.Collectors.toList())) {
+			StockVO invTruStock = invTruMap.get(stockVO.getStockID());
+			returnMessage.append(stockVO.getStockID())
+					.append(" ")
+					.append(stockVO.getStockName())
+					.append(" 外: ")
+					.append(getBuyOverQty(foreignList.stream()
+							.filter(stock -> stock.getStockID().equals(stockVO.getStockID()))
+							.findFirst().orElse(stockVO)))
+					.append("張 投: ")
+					.append(getBuyOverQty(invTruStock))
+					.append("張\n");
+		}
+	}
+
+
+	//土洋合殺維持原邏輯：外資與投信賣超清單的交集
+	private void appendTogetherSellOverStock(StringBuffer returnMessage, List<StockVO> foreignList, List<StockVO> invTruList) {
 		Map<String, StockVO> invTruMap = new HashMap<>();
 		for (StockVO stockVO : invTruList) {
 			invTruMap.put(stockVO.getStockID(), stockVO);
@@ -210,67 +259,56 @@ public class BuySellCrawler {
 
 	//將拿到買超集合方法獨立
 	private List<StockVO> getBuyOverByURL(String restURL) throws IOException, InterruptedException {
-		Map<Integer,List<StockVO>> collectStockList = new TreeMap<>();
-		Map<String, String> map = new HashMap();
+		Map<Integer, List<StockVO>> collectStockList = new TreeMap<>();
+		Map<String, String> map = new HashMap<>();
 		int collectDataDays = 0;
 		int minusDay = 0;
-		// 當天+往回抓2天買超股票 TODO 之後改為變數形式
-		while (collectDataDays <= 3){
-			String dayBack =LocalDate.now().minusDays(minusDay).format(BASIC_ISO_DATE);
+		while (collectDataDays < BUY_OVER_DAYS) {
+			String dayBack = LocalDate.now().minusDays(minusDay).format(BASIC_ISO_DATE);
 			map.put("date", dayBack);
 			String response = requestSender.postRequester(restURL, map);
 			JSONObject originData = new JSONObject(response);
-			//用response裡的"stat":"OK" 分辨是否有拿到資料
-			if (("OK").equals(originData.getString("stat"))){
+			if ("OK".equals(originData.getString("stat"))) {
 				JSONArray sortedData = originData.getJSONArray("data");
-				//建一個List存每天的資料(抓前200)
 				List<StockVO> stockListByDay = new ArrayList<>();
-				int listSize = sortedData.length() < 200 ? sortedData.length() : 200;
-				for (int i = 0 ; i < listSize; i++){
+				//掃描全部個股(不截斷前200筆)，避免漏掉買超張數較少的股票
+				for (int i = 0; i < sortedData.length(); i++) {
+					String[] eachStockBlock = convertor.getArrayByIdx(sortedData, i);
+					long buyOverQty = Long.parseLong(eachStockBlock[eachStockBlock.length - 1].replace(",", ""));
+					if (buyOverQty <= 0) {
+						continue;
+					}
 					StockVO vo = new StockVO();
-					String[] eachStockBlock = convertor.getArrayByIdx(originData.getJSONArray("data"),i);
 					vo.setStockID(eachStockBlock[1].trim());
 					vo.setStockName(eachStockBlock[2].trim());
-					Long buyOverQty = Long.valueOf(eachStockBlock[eachStockBlock.length - 1].replace(",", ""));
-					vo.setBuyOverQty(buyOverQty/1000);
-					//>0時才為買超
-					if (buyOverQty>0){
-						stockListByDay.add(vo);
-					}
+					vo.setBuyOverQty(buyOverQty / 1000);
+					stockListByDay.add(vo);
 				}
-				collectStockList.put(collectDataDays,stockListByDay);
+				collectStockList.put(collectDataDays, stockListByDay);
 				collectDataDays++;
 			}
-			Thread.currentThread().sleep(500); //避免請求過於頻繁
+			Thread.sleep(500);
 			minusDay++;
 		}
 
-		//先求出每一天都有買超（連續買超）的交集
-		List<StockVO> comparedList = new ArrayList<>();
-		for (int i = 0; i < collectStockList.size(); i++) {
-			if (CollectionUtils.isEmpty(comparedList)){
-				comparedList = new ArrayList<>(collectStockList.get(i));
-			} else {
-				comparedList.retainAll(collectStockList.get(i));
-			}
+		List<StockVO> comparedList = new ArrayList<>(collectStockList.get(0));
+		for (int i = 1; i < BUY_OVER_DAYS; i++) {
+			comparedList.retainAll(collectStockList.get(i));
 		}
 
-		//將各天同一檔股票的買超張數加總
 		Map<String, Long> totalQtyMap = new HashMap<>();
 		for (List<StockVO> dailyList : collectStockList.values()) {
 			for (StockVO dailyStock : dailyList) {
-				long qty = dailyStock.getBuyOverQty() == null ? 0L : dailyStock.getBuyOverQty();
-				totalQtyMap.merge(dailyStock.getStockID(), qty, Long::sum);
+				totalQtyMap.merge(dailyStock.getStockID(), getBuyOverQty(dailyStock), Long::sum);
 			}
 		}
 		for (StockVO stockVO : comparedList) {
 			stockVO.setBuyOverQty(totalQtyMap.getOrDefault(stockVO.getStockID(), 0L));
 		}
 
-		//依加總張數由大到小排序
-		comparedList.sort(Comparator.comparingLong(
-				(StockVO stockVO) -> stockVO.getBuyOverQty() == null ? 0L : stockVO.getBuyOverQty()).reversed());
-
+		//回傳完整的三日連續買超清單(依三日加總由大到小)，前10名只在輸出時截取，
+		//否則土洋合攻會變成「外資前10」與「投信前10」的交集而幾乎沒有結果
+		comparedList.sort(Comparator.comparingLong(this::getBuyOverQty).reversed());
 		return comparedList;
 	}
 
@@ -305,7 +343,7 @@ public class BuySellCrawler {
 					appendBuyOverStockList(returnMessage, invTruList, "投");
 					returnMessage.append("\n");
 					returnMessage.append("土洋合殺3日連續賣超股:\n");
-					appendTogetherBuyOverStock(returnMessage, foreignList, invTruList);
+					appendTogetherSellOverStock(returnMessage, foreignList, invTruList);
 					return returnMessage.toString();
 			}
 

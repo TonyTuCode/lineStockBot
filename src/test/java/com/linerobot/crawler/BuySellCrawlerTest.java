@@ -26,7 +26,7 @@ class BuySellCrawlerTest {
         assertThat(result).isNotBlank();
     }
 
-//    @Test
+    @Test
     void getBuyOverStockTopForeignAndInvestmentTrustBuyCallsRemoteAndPrintsResult() {
         String result = buySellCrawler.getBuyOverStockTop(3);
 
